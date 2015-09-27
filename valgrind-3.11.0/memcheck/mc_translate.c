@@ -6247,6 +6247,37 @@ static Bool checkForBogusLiterals ( /*FLAT*/ IRStmt* st )
    }
 }
 
+VG_REGPARM(1)
+void pg_trace_inst(Addr ad);
+
+// pgbovine
+VG_REGPARM(1)
+void pg_trace_inst(Addr a) {
+  // adapted from ../coregrind/m_addrinfo.c
+  const HChar *fn;
+  Bool  hasfn;
+  const HChar *file;
+  Bool  hasfile;
+  UInt linenum;
+  Bool haslinenum;
+  PtrdiffT offset;
+
+  haslinenum = VG_(get_linenum) (a, &linenum);
+  hasfile = VG_(get_filename)(a, &file);
+
+  hasfn = VG_(get_fnname)(a, &fn);
+  if (hasfn || hasfile) {
+     VG_(printf)("pg_trace_inst 0x%x %s %s (%u)\n",
+                 a,
+                 hasfile ? file : "???",
+                 hasfn ? fn : "???",
+                 haslinenum ? linenum : -1);
+
+    VG_(get_and_pp_StackTrace)(VG_(get_running_tid)(), 100); // TODO: decompose this into parts
+  } else {
+    VG_(printf)("pg_trace_inst 0x%x\n", a);
+  }
+}
 
 IRSB* MC_(instrument) ( VgCallbackClosure* closure,
                         IRSB* sb_in, 
@@ -6430,6 +6461,8 @@ IRSB* MC_(instrument) ( VgCallbackClosure* closure,
             schemeS( &mce, st );
       }
 
+      IRDirty *di; // pgbovine
+
       /* Generate instrumentation code for each stmt ... */
 
       switch (st->tag) {
@@ -6471,6 +6504,14 @@ IRSB* MC_(instrument) ( VgCallbackClosure* closure,
             break;
 
          case Ist_IMark:
+            // pgbovine -- from fjalar
+            di = unsafeIRDirty_0_N(1/*regparms*/,
+                 "pg_trace_inst",
+                 &pg_trace_inst,
+                 mkIRExprVec_1(IRExpr_Const(IRConst_U64(st->Ist.IMark.addr))));
+            // TODO: need to mark where the dirty instruction might access
+            stmt('V', &mce, IRStmt_Dirty(di));
+            // END pgbovine
             break;
 
          case Ist_NoOp:
@@ -6548,6 +6589,24 @@ IRSB* MC_(instrument) ( VgCallbackClosure* closure,
       }
       VG_(printf)("\n");
    }
+
+   // pgbovine - from fjalar (maybe not needed for us)
+   // The IRBB itself may contain a Ret
+   // (return) as its end-of-block jump.  If so, then this is possibly
+   // a cue for a function exit.  This is very important for detecting
+   // function exits!
+   //handle_possible_exit( &mce, sb_out->jumpkind );
+   //if (Ijk_Ret == sb_out->jumpkind) {
+   //  IRDirty  *di;
+   //  // pgbovine -- from fjalar
+   //  di = unsafeIRDirty_0_N(1/*regparms*/,
+   //       "pg_trace_inst",
+   //       &pg_trace_inst,
+   //      mkIRExprVec_1(IRExpr_Const(IRConst_U64(st->Ist.IMark.addr))));
+   // TODO: need to mark where the dirty instruction might
+   // access
+   //  stmt('V', &mce, IRStmt_Dirty(di));
+   //}
 
    /* If this fails, there's been some serious snafu with tmp management,
       that should be investigated. */
