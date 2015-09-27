@@ -41,6 +41,8 @@
 #include "pub_tool_libcbase.h"
 
 #include "pub_tool_debuginfo.h" // pgbovine
+#include "pub_tool_stacktrace.h" // pgbovine
+#include "pub_tool_threadstate.h" // pgbovine
 
 #include "mc_include.h"
 
@@ -6249,12 +6251,13 @@ static Bool checkForBogusLiterals ( /*FLAT*/ IRStmt* st )
    }
 }
 
-VG_REGPARM(1)
-void pg_trace_inst(Addr ad);
 
 // pgbovine
+VG_REGPARM(1) void pg_trace_inst(Addr ad);
+
 VG_REGPARM(1)
-void pg_trace_inst(Addr a) {
+void pg_trace_inst(Addr a)
+{
   // adapted from ../coregrind/m_addrinfo.c
   const HChar *file;
   Bool hasfile = VG_(get_filename)(a, &file);
@@ -6263,14 +6266,51 @@ void pg_trace_inst(Addr a) {
     const HChar *fn;
     Bool hasfn = VG_(get_fnname)(a, &fn);
     UInt linenum;
-    Bool haslinenum = VG_(get_linenum) (a, &linenum);
-    VG_(printf)("pg_trace_inst 0x%x %s %s (%u) - Kind: %d\n",
-                a,
+    Bool haslinenum = VG_(get_linenum)(a, &linenum);
+    VG_(printf)("pg_trace_inst %p %s %s (%u) - Kind: %d\n",
+                (void*)a,
                 hasfile ? file : "???",
                 hasfn ? fn : "???",
                 haslinenum ? linenum : -1,
                 (int)kind);
-    VG_(get_and_pp_StackTrace)(VG_(get_running_tid)(), 100); // TODO: decompose this into parts
+
+    //VG_(get_and_pp_StackTrace)(VG_(get_running_tid)(), 100); // TODO: decompose this into parts
+
+    Addr ips[100];
+    Addr sps[100];
+    Addr fps[100];
+    UInt stack_depth = VG_(get_StackTrace)(VG_(get_running_tid)(),
+                                           ips, 100 /* max stack depth */,
+                                           sps,
+                                           fps,
+                                           0);
+    for (UInt i = 0; i < stack_depth; i++) {
+      Addr cur_ip = ips[i];
+      Addr cur_sp = sps[i];
+      Addr cur_fp = fps[i];
+      Vg_FnNameKind ip_kind = VG_(get_fnname_kind_from_IP)(cur_ip);
+      // as soon as you're on the first entry below main, break outta here!
+      if (ip_kind == Vg_FnNameBelowMain) {
+        break;
+      }
+
+      const HChar *cur_file;
+      Bool cur_hasfile = VG_(get_filename)(cur_ip, &cur_file);
+      const HChar *cur_fn;
+      Bool cur_hasfn = VG_(get_fnname)(cur_ip, &cur_fn);
+      UInt cur_linenum;
+      Bool cur_haslinenum = VG_(get_linenum)(cur_ip, &cur_linenum);
+
+      VG_(printf)("%u - Kind: %d, IP: %p, %s:%s(%d), SP: %p, FP: %p\n",
+                  i, ip_kind,
+                  (void*)cur_ip,
+                  cur_hasfile ? cur_file : "???",
+                  cur_hasfn ? cur_fn : "???",
+                  cur_haslinenum ? cur_linenum : -999,
+                  (void*)cur_sp, (void*)cur_fp);
+    }
+
+    VG_(printf)("\n");
   }
 }
 
