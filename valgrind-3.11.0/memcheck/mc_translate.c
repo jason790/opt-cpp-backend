@@ -6308,6 +6308,19 @@ void pg_trace_inst(Addr a)
                   cur_hasfn ? cur_fn : "???",
                   cur_haslinenum ? cur_linenum : -999,
                   (void*)cur_sp, (void*)cur_fp);
+
+      // stack blocks
+      XArray* blocks = VG_(di_get_stack_blocks_at_ip)(cur_ip, False);
+      if (blocks) {
+        for (int j = 0; j < VG_(sizeXA)(blocks); j++) {
+          StackBlock* sb = VG_(indexXA)(blocks, j);
+          VG_(printf)("  sb %d: %s\n", j, sb->name);
+        }
+
+        VG_(deleteXA)(blocks);
+      }
+
+      // TODO: similar for global blocks? see include/pub_tool_debuginfo.h
     }
 
     VG_(printf)("\n");

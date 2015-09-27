@@ -7380,9 +7380,6 @@ static void ocache_sarp_Clear_Origins ( Addr a, UWord len ) {
 
 static void mc_post_clo_init ( void )
 {
-  // pgbovine -- http://valgrind.10908.n7.nabble.com/how-to-get-local-variable-name-from-data-address-td39979.html
-  VG_(needs_var_info)();
-
    /* If we've been asked to emit XML, mash around various other
       options so as to constrain the output somewhat. */
    if (VG_(clo_xml)) {
@@ -7733,6 +7730,9 @@ static void mc_pre_clo_init(void)
 
    VG_(needs_final_IR_tidy_pass)  ( MC_(final_tidy) );
 
+   // pgbovine -- http://valgrind.10908.n7.nabble.com/how-to-get-local-variable-name-from-data-address-td39979.html
+   // automatically activates --read-var-info=yes
+   VG_(needs_var_info)();
 
    VG_(needs_core_errors)         ();
    VG_(needs_tool_errors)         (MC_(eq_Error),
