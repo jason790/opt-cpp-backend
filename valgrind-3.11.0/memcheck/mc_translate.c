@@ -40,6 +40,8 @@
 #include "pub_tool_mallocfree.h"
 #include "pub_tool_libcbase.h"
 
+#include "pub_tool_debuginfo.h" // pgbovine
+
 #include "mc_include.h"
 
 
@@ -6254,28 +6256,21 @@ void pg_trace_inst(Addr ad);
 VG_REGPARM(1)
 void pg_trace_inst(Addr a) {
   // adapted from ../coregrind/m_addrinfo.c
-  const HChar *fn;
-  Bool  hasfn;
   const HChar *file;
-  Bool  hasfile;
-  UInt linenum;
-  Bool haslinenum;
-  PtrdiffT offset;
-
-  haslinenum = VG_(get_linenum) (a, &linenum);
-  hasfile = VG_(get_filename)(a, &file);
-
-  hasfn = VG_(get_fnname)(a, &fn);
-  if (hasfn || hasfile) {
-     VG_(printf)("pg_trace_inst 0x%x %s %s (%u)\n",
-                 a,
-                 hasfile ? file : "???",
-                 hasfn ? fn : "???",
-                 haslinenum ? linenum : -1);
-
+  Bool hasfile = VG_(get_filename)(a, &file);
+  if (hasfile && VG_STREQ(file, "basic.c" /* HARDCODED! */)) {
+    Vg_FnNameKind kind = VG_(get_fnname_kind_from_IP)(a);
+    const HChar *fn;
+    Bool hasfn = VG_(get_fnname)(a, &fn);
+    UInt linenum;
+    Bool haslinenum = VG_(get_linenum) (a, &linenum);
+    VG_(printf)("pg_trace_inst 0x%x %s %s (%u) - Kind: %d\n",
+                a,
+                hasfile ? file : "???",
+                hasfn ? fn : "???",
+                haslinenum ? linenum : -1,
+                (int)kind);
     VG_(get_and_pp_StackTrace)(VG_(get_running_tid)(), 100); // TODO: decompose this into parts
-  } else {
-    VG_(printf)("pg_trace_inst 0x%x\n", a);
   }
 }
 
@@ -6509,7 +6504,8 @@ IRSB* MC_(instrument) ( VgCallbackClosure* closure,
                  "pg_trace_inst",
                  &pg_trace_inst,
                  mkIRExprVec_1(IRExpr_Const(IRConst_U64(st->Ist.IMark.addr))));
-            // TODO: need to mark where the dirty instruction might access
+            // TODO: need to mark what parts the dirty instruction might access
+            // so that Valgrind doesn't optimize code away or something?!?
             stmt('V', &mce, IRStmt_Dirty(di));
             // END pgbovine
             break;
