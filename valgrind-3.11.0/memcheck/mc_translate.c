@@ -6314,7 +6314,8 @@ void pg_trace_inst(Addr a)
       if (blocks) {
         for (int j = 0; j < VG_(sizeXA)(blocks); j++) {
           StackBlock* sb = VG_(indexXA)(blocks, j);
-          VG_(printf)("  sb %d: %s\n", j, sb->name);
+          VG_(printf)("  sb %d: %s | base: %d, szB: %d, spRel: %d, isVec: %d\n", j, sb->name,
+                      sb->base, sb->szB, sb->spRel, sb->isVec);
         }
 
         VG_(deleteXA)(blocks);
