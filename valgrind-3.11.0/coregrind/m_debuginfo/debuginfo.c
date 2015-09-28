@@ -3630,7 +3630,7 @@ Bool consider_vars_in_frame ( /*MOD*/XArray* /* of HChar */ dname1,
       for (j = 0; j < VG_(sizeXA)( vars ); j++) {
          DiVariable* var = (DiVariable*)VG_(indexXA)( vars, j );
          PtrdiffT    offset;
-         if (debug)
+         //if (debug) // pgbovine stent
             VG_(printf)("QQQQ:    var:name=%s %#lx-%#lx %#lx\n",
                         var->name,arange->aMin,arange->aMax,ip);
          if (data_address_is_in_var( &offset, di->admin_tyents,
@@ -3640,6 +3640,14 @@ Bool consider_vars_in_frame ( /*MOD*/XArray* /* of HChar */ dname1,
             XArray* described = ML_(describe_type)( &residual_offset,
                                                     di->admin_tyents, 
                                                     var->typeR, offset );
+
+            // pgbovine stent
+            TyEnt* ty = ML_(TyEnts__index_by_cuOff)(di->admin_tyents, NULL, var->typeR);
+            VG_(printf)("  ");
+            ML_(pp_TyEnt)(ty);
+            VG_(printf)("\n");
+            // END pgbovine
+
             format_message( dname1, dname2,
                             data_addr, di, var, offset, residual_offset,
                             described, frameNo, tid );

@@ -6314,8 +6314,12 @@ void pg_trace_inst(Addr a)
       if (blocks) {
         for (int j = 0; j < VG_(sizeXA)(blocks); j++) {
           StackBlock* sb = VG_(indexXA)(blocks, j);
-          VG_(printf)("  sb %d: %s | base: %d, szB: %d, spRel: %d, isVec: %d\n", j, sb->name,
-                      sb->base, sb->szB, sb->spRel, sb->isVec);
+          Addr var_addr = sb->spRel ? cur_sp + sb->base : cur_fp + sb->base;
+          VG_(printf)("  sb %d: %s | base: %d, szB: %d, spRel: %d, isVec: %d | %p\n", j, sb->name,
+                      sb->base, sb->szB, sb->spRel, sb->isVec,
+                      (void*)var_addr);
+
+          MC_(pp_describe_addr) (var_addr);
         }
 
         VG_(deleteXA)(blocks);
