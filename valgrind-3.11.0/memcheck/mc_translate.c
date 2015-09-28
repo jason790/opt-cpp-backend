@@ -6319,7 +6319,8 @@ void pg_trace_inst(Addr a)
                       sb->base, sb->szB, sb->spRel, sb->isVec,
                       (void*)var_addr);
 
-          MC_(pp_describe_addr) (var_addr);
+          //MC_(pp_describe_addr) (var_addr);
+          VG_(pg_traverse_local_var)(var_addr, cur_ip, cur_sp, cur_fp);
         }
 
         VG_(deleteXA)(blocks);

@@ -119,6 +119,10 @@ Bool VG_(get_data_description)(
         Addr data_addr
      );
 
+// pgbovine
+Bool VG_(pg_traverse_local_var) (Addr data_addr,
+                                 Addr ip, Addr sp, Addr fp);
+
 /* Succeeds if the address is within a shared object or the main executable.
    It doesn't matter if debug info is present or not. */
 extern Bool VG_(get_objname)  ( Addr a, const HChar** objname );

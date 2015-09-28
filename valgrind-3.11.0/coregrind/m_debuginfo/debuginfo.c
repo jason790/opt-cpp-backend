@@ -3630,7 +3630,7 @@ Bool consider_vars_in_frame ( /*MOD*/XArray* /* of HChar */ dname1,
       for (j = 0; j < VG_(sizeXA)( vars ); j++) {
          DiVariable* var = (DiVariable*)VG_(indexXA)( vars, j );
          PtrdiffT    offset;
-         //if (debug) // pgbovine stent
+         if (debug)
             VG_(printf)("QQQQ:    var:name=%s %#lx-%#lx %#lx\n",
                         var->name,arange->aMin,arange->aMax,ip);
          if (data_address_is_in_var( &offset, di->admin_tyents,
@@ -3640,14 +3640,6 @@ Bool consider_vars_in_frame ( /*MOD*/XArray* /* of HChar */ dname1,
             XArray* described = ML_(describe_type)( &residual_offset,
                                                     di->admin_tyents, 
                                                     var->typeR, offset );
-
-            // pgbovine stent
-            TyEnt* ty = ML_(TyEnts__index_by_cuOff)(di->admin_tyents, NULL, var->typeR);
-            VG_(printf)("  ");
-            ML_(pp_TyEnt)(ty);
-            VG_(printf)("\n");
-            // END pgbovine
-
             format_message( dname1, dname2,
                             data_addr, di, var, offset, residual_offset,
                             described, frameNo, tid );
@@ -3659,6 +3651,127 @@ Bool consider_vars_in_frame ( /*MOD*/XArray* /* of HChar */ dname1,
 
    return False;
 }
+
+
+// pgbovine - copied and pasted from consider_vars_in_frame above
+Bool VG_(pg_traverse_local_var) (Addr data_addr,
+                                 Addr ip, Addr sp, Addr fp)
+{
+   Word       i;
+   DebugInfo* di;
+   RegSummary regs;
+   Bool debug = False;
+
+   static UInt n_search = 0;
+   static UInt n_steps = 0;
+   n_search++;
+   if (debug)
+      VG_(printf)("QQQQ: cvif: ip,sp,fp %#lx,%#lx,%#lx\n", ip,sp,fp);
+   /* first, find the DebugInfo that pertains to 'ip'. */
+   for (di = debugInfo_list; di; di = di->next) {
+      n_steps++;
+      /* text segment missing? unlikely, but handle it .. */
+      if (!di->text_present || di->text_size == 0)
+         continue;
+      /* Ok.  So does this text mapping bracket the ip? */
+      if (di->text_avma <= ip && ip < di->text_avma + di->text_size)
+         break;
+   }
+ 
+   /* Didn't find it.  Strange -- means ip is a code address outside
+      of any mapped text segment.  Unlikely but not impossible -- app
+      could be generating code to run. */
+   if (!di)
+      return False;
+
+   if (0 && ((n_search & 0x1) == 0))
+      VG_(printf)("consider_vars_in_frame: %u searches, "
+                  "%u DebugInfos looked at\n", 
+                  n_search, n_steps);
+   /* Start of performance-enhancing hack: once every ??? (chosen
+      hackily after profiling) successful searches, move the found
+      DebugInfo one step closer to the start of the list.  This makes
+      future searches cheaper. */
+   if ((n_search & 0xFFFF) == 0) {
+      /* Move si one step closer to the start of the list. */
+      move_DebugInfo_one_step_forward( di );
+   }
+   /* End of performance-enhancing hack. */
+
+   /* any var info at all? */
+   if (!di->varinfo)
+      return False;
+
+   /* Work through the scopes from most deeply nested outwards,
+      looking for code address ranges that bracket 'ip'.  The
+      variables on each such address range found are in scope right
+      now.  Don't descend to level zero as that is the global
+      scope. */
+   regs.ip = ip;
+   regs.sp = sp;
+   regs.fp = fp;
+
+   /* "for each scope, working outwards ..." */
+   for (i = VG_(sizeXA)(di->varinfo) - 1; i >= 1; i--) {
+      XArray*      vars;
+      Word         j;
+      DiAddrRange* arange;
+      OSet*        this_scope 
+         = *(OSet**)VG_(indexXA)( di->varinfo, i );
+      if (debug)
+         VG_(printf)("QQQQ:   considering scope %ld\n", (Word)i);
+      if (!this_scope)
+         continue;
+      /* Find the set of variables in this scope that
+         bracket the program counter. */
+      arange = VG_(OSetGen_LookupWithCmp)(
+                  this_scope, &ip, 
+                  ML_(cmp_for_DiAddrRange_range)
+               );
+      if (!arange)
+         continue;
+      /* stay sane */
+      vg_assert(arange->aMin <= arange->aMax);
+      /* It must bracket the ip we asked for, else
+         ML_(cmp_for_DiAddrRange_range) is somehow broken. */
+      vg_assert(arange->aMin <= ip && ip <= arange->aMax);
+      /* It must have an attached XArray of DiVariables. */
+      vars = arange->vars;
+      vg_assert(vars);
+      /* But it mustn't cover the entire address range.  We only
+         expect that to happen for the global scope (level 0), which
+         we're not looking at here.  Except, it may cover the entire
+         address range, but in that case the vars array must be
+         empty. */
+      vg_assert(! (arange->aMin == (Addr)0
+                   && arange->aMax == ~(Addr)0
+                   && VG_(sizeXA)(vars) > 0) );
+      for (j = 0; j < VG_(sizeXA)( vars ); j++) {
+         DiVariable* var = (DiVariable*)VG_(indexXA)( vars, j );
+         PtrdiffT    offset;
+         if (debug)
+            VG_(printf)("QQQQ:    var:name=%s %#lx-%#lx %#lx\n",
+                        var->name,arange->aMin,arange->aMax,ip);
+         if (data_address_is_in_var( &offset, di->admin_tyents,
+                                     var, &regs,
+                                     data_addr, di )) {
+            // pgbovine
+            TyEnt* ty = ML_(TyEnts__index_by_cuOff)(di->admin_tyents, NULL, var->typeR);
+            VG_(printf)("    ");
+            ML_(pp_TyEnt)(ty);
+            VG_(printf)("\n");
+            VG_(printf)("    ");
+            ML_(pp_TyEnt_C_ishly)(di->admin_tyents, var->typeR); // wow, prints out C-style decl; good to study
+            VG_(printf)("\n");
+
+            return True;
+         }
+      }
+   }
+
+   return False;
+}
+
 
 /* Try to form some description of DATA_ADDR by looking at the DWARF3
    debug info we have.  This considers all global variables, and 8
