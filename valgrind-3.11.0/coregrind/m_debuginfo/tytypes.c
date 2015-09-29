@@ -360,15 +360,38 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                      ent->Te.TyBase.name,
                      ent->Te.TyBase.szB,
                      ent->Te.TyBase.enc);
+
          // attempt to print out the value
          // TODO: check memcheck's A and V bits
 
-         UInt mask = ~(~0 << ent->Te.TyBase.szB); // TODO: is this right?
-
          if (ent->Te.TyBase.enc == 'S') {
-           VG_(printf)(" val=%d", (*((Int*)data_addr) & mask));
+           if (ent->Te.TyBase.szB == sizeof(char)) {
+             // TODO: print as number or character?
+             VG_(printf)(" val=%d", *((char*)data_addr));
+           } else if (ent->Te.TyBase.szB == sizeof(short)) {
+             VG_(printf)(" val=%d", *((short*)data_addr));
+           } else if (ent->Te.TyBase.szB == sizeof(int)) {
+             VG_(printf)(" val=%d", *((int*)data_addr));
+           } else if (ent->Te.TyBase.szB == sizeof(long int)) {
+             VG_(printf)(" val=%d", *((long int*)data_addr));
+           } else {
+             // what other stuff is here?!?
+             vg_assert(0);
+           }
          } else if (ent->Te.TyBase.enc == 'U') {
-           VG_(printf)(" val=%u", (*((UInt*)data_addr) & mask));
+           if (ent->Te.TyBase.szB == sizeof(unsigned char)) {
+             // TODO: print as number or character?
+             VG_(printf)(" val=%u", *((unsigned char*)data_addr));
+           } else if (ent->Te.TyBase.szB == sizeof(unsigned short)) {
+             VG_(printf)(" val=%u", *((unsigned short*)data_addr));
+           } else if (ent->Te.TyBase.szB == sizeof(unsigned int)) {
+             VG_(printf)(" val=%u", *((unsigned int*)data_addr));
+           } else if (ent->Te.TyBase.szB == sizeof(unsigned long int)) {
+             VG_(printf)(" val=%u", *((unsigned long int*)data_addr));
+           } else {
+             // what other stuff is here?!?
+             vg_assert(0);
+           }
          } else if (ent->Te.TyBase.enc == 'F') {
            // careful about subtleties around floats and doubles and stuff ..
            if (ent->Te.TyBase.szB == sizeof(float)) {
