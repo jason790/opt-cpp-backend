@@ -157,6 +157,11 @@ void ML_(pp_TyEnts)( const XArray* tyents, const HChar* who );
 void ML_(pp_TyEnt_C_ishly)( const XArray* /* of TyEnt */ tyents,
                             UWord cuOff );
 
+// pgbovine
+void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
+                         UWord cuOff,
+                         Addr data_addr );
+
 /* Generates a total ordering on TyEnts based only on their .cuOff
    fields. */
 Word ML_(TyEnt__cmp_by_cuOff_only) ( const TyEnt* te1, const TyEnt* te2 );

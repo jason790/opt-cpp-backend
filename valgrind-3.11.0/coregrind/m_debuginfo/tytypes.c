@@ -320,6 +320,150 @@ void ML_(pp_TyEnt_C_ishly)( const XArray* /* of TyEnt */ tyents,
 }
 
 
+// pgbovine version of pp_TyBound_C_ishly
+static void pg_pp_TyBound( const XArray* tyents, UWord cuOff )
+{
+   TyEnt* ent = ML_(TyEnts__index_by_cuOff)( tyents, NULL, cuOff );
+   if (!ent) {
+      VG_(printf)("**bounds-have-invalid-cuOff**");
+      return;
+   }
+   vg_assert(ent->tag == Te_Bound);
+   if (ent->Te.Bound.knownL && ent->Te.Bound.knownU
+       && ent->Te.Bound.boundL == 0) {
+      VG_(printf)("[%lld]", 1 + ent->Te.Bound.boundU);
+   }
+   else
+   if (ent->Te.Bound.knownL && (!ent->Te.Bound.knownU) 
+       && ent->Te.Bound.boundL == 0) {
+      VG_(printf)("[]");
+   }
+   else
+      ML_(pp_TyEnt)( ent );
+}
+
+// pgbovine version of ML_(pp_TyEnt_C_ishly)
+void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
+                         UWord cuOff,
+                         Addr data_addr )
+{
+   TyEnt* ent = ML_(TyEnts__index_by_cuOff)( tyents, NULL, cuOff );
+   if (!ent) {
+      VG_(printf)("**type-has-invalid-cuOff**");
+      return;
+   }
+   switch (ent->tag) {
+      case Te_TyBase:
+         if (!ent->Te.TyBase.name) goto unhandled;
+         //VG_(printf)("%s", ent->Te.TyBase.name);
+         VG_(printf)("[base] %s (%d %c)",
+                     ent->Te.TyBase.name,
+                     ent->Te.TyBase.szB,
+                     ent->Te.TyBase.enc);
+         // attempt to print out the value
+         // TODO: check memcheck's A and V bits
+
+         UInt mask = ~(~0 << ent->Te.TyBase.szB); // TODO: is this right?
+
+         if (ent->Te.TyBase.enc == 'S') {
+           VG_(printf)(" val=%d", (*((Int*)data_addr) & mask));
+         } else if (ent->Te.TyBase.enc == 'U') {
+           VG_(printf)(" val=%u", (*((UInt*)data_addr) & mask));
+         } else if (ent->Te.TyBase.enc == 'F') {
+           // careful about subtleties around floats and doubles and stuff ..
+           if (ent->Te.TyBase.szB == sizeof(float)) {
+             VG_(printf)(" val=%.2f", *((float*)data_addr));
+           } else if (ent->Te.TyBase.szB == sizeof(double)) {
+             VG_(printf)(" val=%.2f", *((double*)data_addr));
+           } else if (ent->Te.TyBase.szB == sizeof(long double)) {
+             VG_(printf)(" val=%.2f", *((long double*)data_addr));
+           } else {
+             // what other stuff is here?!?
+             vg_assert(0);
+           }
+         } else if (ent->Te.TyBase.enc == 'C') {
+           // complex floats are unhandled right now
+           vg_assert(0);
+         } else {
+           vg_assert(0);
+         }
+
+         break;
+      case Te_TyPtr:
+         VG_(printf)("[ptr] ");
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */);
+         VG_(printf)("*");
+         break;
+      case Te_TyRef:
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */);
+         VG_(printf)("&");
+         break;
+      case Te_TyPtrMbr:
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */);
+         VG_(printf)("*");
+         break;
+      case Te_TyRvalRef:
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */);
+         VG_(printf)("&&");
+         break;
+      case Te_TyEnum:
+         VG_(printf)("enum %s", ent->Te.TyEnum.name ? ent->Te.TyEnum.name
+                                                    : "<anonymous>" );
+         break;
+      case Te_TyStOrUn:
+         VG_(printf)("%s %s",
+                     ent->Te.TyStOrUn.isStruct ? "struct" : "union",
+                     ent->Te.TyStOrUn.name ? ent->Te.TyStOrUn.name
+                                           : "<anonymous>" );
+         break;
+      case Te_TyArray:
+         VG_(printf)("[array] ");
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyArray.typeR, data_addr /* stent */);
+         if (ent->Te.TyArray.boundRs) {
+            Word    w;
+            XArray* xa = ent->Te.TyArray.boundRs;
+            for (w = 0; w < VG_(sizeXA)(xa); w++) {
+               pg_pp_TyBound( tyents, *(UWord*)VG_(indexXA)(xa, w) );
+            }
+         } else {
+            VG_(printf)("%s", "[??]");
+         }
+         break;
+      case Te_TyTyDef:
+         VG_(printf)("%s", ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name
+                                                : "<anonymous>" );
+         break;
+      case Te_TyFn:
+         VG_(printf)("%s", "<function_type>");
+         break;
+      case Te_TyQual:
+         switch (ent->Te.TyQual.qual) {
+            case 'C': VG_(printf)("const "); break;
+            case 'V': VG_(printf)("volatile "); break;
+            case 'R': VG_(printf)("restrict "); break;
+            default: goto unhandled;
+         }
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyQual.typeR, data_addr /* stent */);
+         break;
+      case Te_TyVoid:
+         VG_(printf)("%svoid",
+                     ent->Te.TyVoid.isFake ? "fake" : "");
+         break;
+      case Te_UNKNOWN:
+         ML_(pp_TyEnt)(ent);
+         break;
+      default:
+         goto unhandled;
+   }
+   return;
+
+  unhandled:
+   VG_(printf)("pg_pp_varinfo:unhandled: ");
+   ML_(pp_TyEnt)(ent);
+   vg_assert(0);
+}
+
+
 /* 'ents' is an XArray of TyEnts, sorted by their .cuOff fields.  Find
    the entry which has .cuOff field as specified.  Returns NULL if not
    found.  Asserts if more than one entry has the specified .cuOff

@@ -6262,6 +6262,7 @@ void pg_trace_inst(Addr a)
   const HChar *file;
   Bool hasfile = VG_(get_filename)(a, &file);
   if (hasfile && VG_STREQ(file, "basic.c" /* HARDCODED! */)) {
+  //if (hasfile && VG_STREQ(file, "meng-thesis-example.c" /* HARDCODED! */)) {
     Vg_FnNameKind kind = VG_(get_fnname_kind_from_IP)(a);
     const HChar *fn;
     Bool hasfn = VG_(get_fnname)(a, &fn);

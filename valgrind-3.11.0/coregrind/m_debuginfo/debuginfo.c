@@ -3756,12 +3756,12 @@ Bool VG_(pg_traverse_local_var) (Addr data_addr,
                                      var, &regs,
                                      data_addr, di )) {
             // pgbovine
-            TyEnt* ty = ML_(TyEnts__index_by_cuOff)(di->admin_tyents, NULL, var->typeR);
+            //TyEnt* ty = ML_(TyEnts__index_by_cuOff)(di->admin_tyents, NULL, var->typeR);
+            //VG_(printf)("    ");
+            //ML_(pp_TyEnt)(ty);
+            //VG_(printf)("\n");
             VG_(printf)("    ");
-            ML_(pp_TyEnt)(ty);
-            VG_(printf)("\n");
-            VG_(printf)("    ");
-            ML_(pp_TyEnt_C_ishly)(di->admin_tyents, var->typeR); // wow, prints out C-style decl; good to study
+            ML_(pg_pp_varinfo)(di->admin_tyents, var->typeR, data_addr);
             VG_(printf)("\n");
 
             return True;
