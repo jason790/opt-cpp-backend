@@ -6316,11 +6316,12 @@ void pg_trace_inst(Addr a)
         for (int j = 0; j < VG_(sizeXA)(blocks); j++) {
           StackBlock* sb = VG_(indexXA)(blocks, j);
           Addr var_addr = sb->spRel ? cur_sp + sb->base : cur_fp + sb->base;
-          VG_(printf)("  sb %d: %s | base: %d, szB: %d, spRel: %d, isVec: %d | %p\n", j, sb->name,
-                      sb->base, sb->szB, sb->spRel, sb->isVec,
-                      (void*)var_addr);
+          //VG_(printf)("  sb %d: %s | base: %d, szB: %d, spRel: %d, isVec: %d | %p\n", j, sb->name,
+          //            sb->base, sb->szB, sb->spRel, sb->isVec,
+          //            (void*)var_addr);
 
           //MC_(pp_describe_addr) (var_addr);
+          VG_(printf)("  %s", sb->name);
           VG_(pg_traverse_local_var)(var_addr, cur_ip, cur_sp, cur_fp);
         }
 
