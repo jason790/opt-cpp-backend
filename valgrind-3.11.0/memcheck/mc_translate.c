@@ -6322,7 +6322,20 @@ void pg_trace_inst(Addr a)
 
           //MC_(pp_describe_addr) (var_addr);
           VG_(printf)("  %s", sb->name);
-          VG_(pg_traverse_local_var)(var_addr, cur_ip, cur_sp, cur_fp);
+
+          // TODO: move into pg_traverse_local_var since we'll need to
+          // use it more in there when we traverse into values
+          Addr bad_addr;
+          UInt otag = 0;
+          MC_ReadResult res = is_mem_defined ( var_addr, sb->szB, &bad_addr, &otag );
+          if (res == MC_AddrErr) {
+            VG_(printf)(" UNALLOCATED\n");
+          } else if (res == MC_ValueErr) {
+            VG_(printf)(" UNINITIALIZED\n");
+          } else {
+            tl_assert(res == MC_Ok);
+            VG_(pg_traverse_local_var)(var_addr, cur_ip, cur_sp, cur_fp);
+          }
         }
 
         VG_(deleteXA)(blocks);

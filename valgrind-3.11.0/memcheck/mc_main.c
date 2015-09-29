@@ -3738,15 +3738,6 @@ void MC_(helperc_MAKE_STACK_UNINIT) ( Addr base, UWord len, Addr nia )
 /*--- Checking memory                                      ---*/
 /*------------------------------------------------------------*/
 
-typedef 
-   enum {
-      MC_Ok = 5, 
-      MC_AddrErr = 6, 
-      MC_ValueErr = 7
-   } 
-   MC_ReadResult;
-
-
 /* Check permissions for address range.  If inadequate permissions
    exist, *bad_addr is set to the offending address, so the caller can
    know what it is. */
@@ -3792,7 +3783,8 @@ static Bool is_mem_addressable ( Addr a, SizeT len,
    return True;
 }
 
-static MC_ReadResult is_mem_defined ( Addr a, SizeT len,
+// pgbovine - made non-static
+MC_ReadResult is_mem_defined ( Addr a, SizeT len,
                                       /*OUT*/Addr* bad_addr,
                                       /*OUT*/UInt* otag )
 {
