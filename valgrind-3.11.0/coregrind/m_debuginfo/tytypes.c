@@ -521,6 +521,22 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
               }
 
          */
+         // ohhhh, or see memcheck/mc_errors.c for
+         // mempool_block_maybe_describe since that represents
+         // heap-allocated?!? maybe?
+         //static void describe_addr ( Addr a, /*OUT*/AddrInfo* ai )
+         //{
+         //   MC_Chunk*  mc;
+         //
+         //   tl_assert(Addr_Undescribed == ai->tag);
+         //
+         //   /* -- Perhaps it's a user-named block? -- */
+         //   if (client_block_maybe_describe( a, ai )) {
+         //      return;
+         //   }
+         //   /* -- Perhaps it's in mempool block? -- */
+         //   if (mempool_block_maybe_describe( a, ai )) {
+
 
          // safely deref the pointer since it's been initialized!
          /*
