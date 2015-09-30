@@ -495,32 +495,27 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          //
          // if it's a pointer to the stack or global area, then if that
          // variable is in scope, then it will already be printed out
-         // elsewhere, so we just need to record the pointer value so
-         // that the visualization knows to draw an arrow there.
+         // elsewhere, so we just need to print the pointer value so
+         // that the visualization knows to draw an arrow to there.
          //
          // if it's a pointer to the heap AND this heap object hasn't
          // yet been traversed (to be visualized), then we need to go in
          // and traverse it so that we can visualize it. then we also
-         // need to record the pointer value so that the visualization
-         // knows to draw an arrow there.
+         // need to print the pointer value so that the visualization
+         // knows to draw an arrow to there.
 
          AddrInfo ai;
          VG_(describe_addr)(ptr_val, &ai);
          // this seems to be reliable only for detecting potential heap blocks
          // and not much else (e.g., stack, globals, literals) :/
          if (ai.tag == Addr_Block) {
-           VG_(printf)("[heap]");
+           // if this is a heap pointer ...
+           VG_(printf)("<heap ptr %p>", (void*)ptr_val);
+         } else {
+           // if this is any other kind of pointer, simply print out its
+           // address and don't dereference it
+           VG_(printf)("<other ptr %p>", (void*)ptr_val);
          }
-
-         // safely deref the pointer since it's been initialized!
-         /*
-         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR,
-                            // TODO: does it matter what type of pointer we
-                            // cast it to? how "big" does it need to be?
-                            (Addr)(*((unsigned int*)data_addr)),
-                            is_mem_defined_func);
-         */
-         VG_(printf)("*");
          break;
       case Te_TyRef:
          vg_assert(0); // unhandled
