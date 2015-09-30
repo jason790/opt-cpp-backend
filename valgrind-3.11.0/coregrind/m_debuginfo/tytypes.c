@@ -472,21 +472,64 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          res = is_mem_defined_func(data_addr, ent->Te.TyPorR.szB,
                                    &bad_addr, &otag);
          if (res == 6 /* MC_AddrErr enum value */) {
-           VG_(printf)(" UNALLOCATED");
+           VG_(printf)(" UNALLOC");
            return; // early!
          } else if (res == 7 /* MC_ValueErr enum value */) {
-           VG_(printf)(" UNINITIALIZED");
+           VG_(printf)(" UNINIT");
            return; // early!
          } else {
            tl_assert(res == 5 /* MC_Ok enum value */);
          }
 
+         // ok so now we know data_addr is legit, so we can dereference
+         // it to get its value
+         Addr ptr_val = *((Addr*)data_addr);
+
+         // what do we do now? ptr_val is either a pointer:
+         // - that's invalid (e.g., null, garbage)
+         // - to the stack
+         // - to the global area
+         // - to the heap
+         //
+         // if it's a pointer to the stack or global area, then if that
+         // variable is in scope, then it will already be printed out
+         // elsewhere, so we just need to record the pointer value so
+         // that the visualization knows to draw an arrow there.
+         //
+         // if it's a pointer to the heap AND this heap object hasn't
+         // yet been traversed (to be visualized), then we need to go in
+         // and traverse it so that we can visualize it. then we also
+         // need to record the pointer value so that the visualization
+         // knows to draw an arrow there.
+         // - since the heap has redzones, we should probe FORWARDS AND
+         //   BACKWARDS to get the entire extent of the entire heap block,
+         //   in case this pointer points to the MIDDLE of it
+         // - from Fjalar, it seems like one heuristic to tell what's
+         //   maybe on the heap is that it's NOT in globals, and it's below
+         //   the lowest current stack pointer
+         /*
+             from generate_fjalar_entries.c
+
+              // Returns true iff the address is within a global area as specified
+              // by the executable's symbol table (it lies within the .data, .bss,
+              // or .rodata sections):
+              Bool addressIsGlobal(Addr addr) {
+                return (((addr >= data_section_addr) && (addr < data_section_addr + data_section_size)) ||
+                        ((addr >= bss_section_addr) && (addr < bss_section_addr + bss_section_size)) ||
+                        ((addr >= rodata_section_addr) && (addr < rodata_section_addr + rodata_section_size)) ||
+                        ((addr >= relrodata_section_addr) && (addr < relrodata_section_addr + relrodata_section_size)));
+              }
+
+         */
+
          // safely deref the pointer since it's been initialized!
+         /*
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR,
                             // TODO: does it matter what type of pointer we
                             // cast it to? how "big" does it need to be?
                             (Addr)(*((unsigned int*)data_addr)),
                             is_mem_defined_func);
+         */
          VG_(printf)("*");
          break;
       case Te_TyRef:
