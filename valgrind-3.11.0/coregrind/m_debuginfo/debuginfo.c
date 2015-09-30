@@ -3655,7 +3655,8 @@ Bool consider_vars_in_frame ( /*MOD*/XArray* /* of HChar */ dname1,
 
 // pgbovine - copied and pasted from consider_vars_in_frame above
 Bool VG_(pg_traverse_local_var) (Addr data_addr,
-                                 Addr ip, Addr sp, Addr fp)
+                                 Addr ip, Addr sp, Addr fp,
+                                 int is_mem_defined_func(Addr, SizeT, Addr*, UInt*))
 {
    Word       i;
    DebugInfo* di;
@@ -3761,7 +3762,8 @@ Bool VG_(pg_traverse_local_var) (Addr data_addr,
             //ML_(pp_TyEnt)(ty);
             //VG_(printf)("\n");
             VG_(printf)("    ");
-            ML_(pg_pp_varinfo)(di->admin_tyents, var->typeR, data_addr);
+            ML_(pg_pp_varinfo)(di->admin_tyents, var->typeR, data_addr,
+                               is_mem_defined_func);
             VG_(printf)("\n");
 
             return True;

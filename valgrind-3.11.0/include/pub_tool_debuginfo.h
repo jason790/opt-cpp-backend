@@ -121,7 +121,8 @@ Bool VG_(get_data_description)(
 
 // pgbovine
 Bool VG_(pg_traverse_local_var) (Addr data_addr,
-                                 Addr ip, Addr sp, Addr fp);
+                                 Addr ip, Addr sp, Addr fp,
+                                 int is_mem_defined_func(Addr, SizeT, Addr*, UInt*));
 
 /* Succeeds if the address is within a shared object or the main executable.
    It doesn't matter if debug info is present or not. */

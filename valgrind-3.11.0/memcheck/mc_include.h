@@ -150,7 +150,8 @@ typedef
 
 
 // pgbovine - made non-static
-MC_ReadResult is_mem_defined ( Addr a, SizeT len, /*OUT*/Addr* bad_addr, /*OUT*/UInt* otag );
+MC_ReadResult is_mem_defined (Addr a, SizeT len,
+                              /*OUT*/Addr* bad_addr, /*OUT*/UInt* otag);
 
 
 void MC_(print_malloc_stats) ( void );

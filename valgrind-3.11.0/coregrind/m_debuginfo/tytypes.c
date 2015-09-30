@@ -345,35 +345,53 @@ static void pg_pp_TyBound( const XArray* tyents, UWord cuOff )
 // pgbovine version of ML_(pp_TyEnt_C_ishly)
 void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                          UWord cuOff,
-                         Addr data_addr )
+                         Addr data_addr,
+                         int is_mem_defined_func(Addr, SizeT, Addr*, UInt*))
 {
    TyEnt* ent = ML_(TyEnts__index_by_cuOff)( tyents, NULL, cuOff );
    if (!ent) {
       VG_(printf)("**type-has-invalid-cuOff**");
       return;
    }
+
+   Addr bad_addr;
+   UInt otag = 0;
+   int res;
+
    switch (ent->tag) {
       case Te_TyBase:
          if (!ent->Te.TyBase.name) goto unhandled;
          //VG_(printf)("%s", ent->Te.TyBase.name);
-         VG_(printf)("[base] %s (%d %c)",
+
+         // check whether this memory has been allocated and/or initialized
+         res = is_mem_defined_func(data_addr, ent->Te.TyBase.szB,
+                                       &bad_addr, &otag);
+         if (res == 6 /* MC_AddrErr enum value */) {
+           VG_(printf)(" UNALLOCATED");
+           return; // early!
+         } else if (res == 7 /* MC_ValueErr enum value */) {
+           VG_(printf)(" UNINITIALIZED");
+           return; // early!
+         } else {
+           tl_assert(res == 5 /* MC_Ok enum value */);
+         }
+
+         // attempt to print out the value
+         VG_(printf)("[base] %s (%d%c)",
                      ent->Te.TyBase.name,
                      ent->Te.TyBase.szB,
                      ent->Te.TyBase.enc);
 
-         // attempt to print out the value
-         // TODO: check memcheck's A and V bits
-
          if (ent->Te.TyBase.enc == 'S') {
            if (ent->Te.TyBase.szB == sizeof(char)) {
-             // TODO: print as number or character?
-             VG_(printf)(" val=%d", *((char*)data_addr));
+             // TODO: print as a character or an int?!?
+             VG_(printf)(" val=%c", *((char*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(short)) {
              VG_(printf)(" val=%d", *((short*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(int)) {
              VG_(printf)(" val=%d", *((int*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(long int)) {
-             VG_(printf)(" val=%d", *((long int*)data_addr));
+             VG_(printf)(" val=%ld", *((long int*)data_addr));
            } else {
              // what other stuff is here?!?
              vg_assert(0);
@@ -387,7 +405,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            } else if (ent->Te.TyBase.szB == sizeof(unsigned int)) {
              VG_(printf)(" val=%u", *((unsigned int*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(unsigned long int)) {
-             VG_(printf)(" val=%u", *((unsigned long int*)data_addr));
+             VG_(printf)(" val=%lu", *((unsigned long int*)data_addr));
            } else {
              // what other stuff is here?!?
              vg_assert(0);
@@ -399,7 +417,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            } else if (ent->Te.TyBase.szB == sizeof(double)) {
              VG_(printf)(" val=%.2f", *((double*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(long double)) {
-             VG_(printf)(" val=%.2f", *((long double*)data_addr));
+             VG_(printf)(" val=%.2Lf", *((long double*)data_addr));
            } else {
              // what other stuff is here?!?
              vg_assert(0);
@@ -414,19 +432,41 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          break;
       case Te_TyPtr:
          VG_(printf)("[ptr] ");
-         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */);
+
+         // check whether this memory has been allocated and/or initialized
+         res = is_mem_defined_func(data_addr, sizeof(void*) /* TODO: is this right?*/,
+                                   &bad_addr, &otag);
+         if (res == 6 /* MC_AddrErr enum value */) {
+           VG_(printf)(" UNALLOCATED");
+           return; // early!
+         } else if (res == 7 /* MC_ValueErr enum value */) {
+           VG_(printf)(" UNINITIALIZED");
+           return; // early!
+         } else {
+           tl_assert(res == 5 /* MC_Ok enum value */);
+         }
+
+         // safely deref the pointer since it's been initialized!
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR,
+                            // TODO: does it matter what type of pointer we
+                            // cast it to? how "big" does it need to be?
+                            (Addr)(*((unsigned int*)data_addr)),
+                            is_mem_defined_func);
          VG_(printf)("*");
          break;
       case Te_TyRef:
-         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */);
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
+                            is_mem_defined_func);
          VG_(printf)("&");
          break;
       case Te_TyPtrMbr:
-         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */);
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
+                            is_mem_defined_func);
          VG_(printf)("*");
          break;
       case Te_TyRvalRef:
-         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */);
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
+                            is_mem_defined_func);
          VG_(printf)("&&");
          break;
       case Te_TyEnum:
@@ -441,7 +481,8 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          break;
       case Te_TyArray:
          VG_(printf)("[array] ");
-         ML_(pg_pp_varinfo)(tyents, ent->Te.TyArray.typeR, data_addr /* stent */);
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyArray.typeR, data_addr /* stent */,
+                            is_mem_defined_func);
          if (ent->Te.TyArray.boundRs) {
             Word    w;
             XArray* xa = ent->Te.TyArray.boundRs;
@@ -466,7 +507,8 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
             case 'R': VG_(printf)("restrict "); break;
             default: goto unhandled;
          }
-         ML_(pg_pp_varinfo)(tyents, ent->Te.TyQual.typeR, data_addr /* stent */);
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyQual.typeR, data_addr /* stent */,
+                            is_mem_defined_func);
          break;
       case Te_TyVoid:
          VG_(printf)("%svoid",
