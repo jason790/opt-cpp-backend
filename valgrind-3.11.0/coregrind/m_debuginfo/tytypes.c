@@ -383,14 +383,12 @@ SizeT pg_get_elt_size(TyEnt* ent)
 }
 
 
-// pgbovine - heap base block addresses that have already been encoded
-OSet* pg_encoded_heap_base_addrs = NULL;
-
 // pgbovine version of ML_(pp_TyEnt_C_ishly)
 void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                          UWord cuOff,
                          Addr data_addr,
-                         int is_mem_defined_func(Addr, SizeT, Addr*, UInt*))
+                         int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
+                         OSet* encoded_heap_base_addrs)
 {
    TyEnt* ent = ML_(TyEnts__index_by_cuOff)( tyents, NULL, cuOff );
    if (!ent) {
@@ -534,17 +532,13 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                        (int)ai.Addr.Block.rwoffset /* offset in bytes */,
                        (int)element_size);
 
-           if (!pg_encoded_heap_base_addrs) {
-             pg_encoded_heap_base_addrs = VG_(OSetWord_Create)(VG_(malloc),
-                                                               "pg_encoded_heap_base_addrs",
-                                                               VG_(free));
-           }
+           vg_assert(encoded_heap_base_addrs);
 
            // avoid rendering duplicates, to prevent redundancies and
            // infinite loops
-           if (!VG_(OSetWord_Contains)(pg_encoded_heap_base_addrs,
+           if (!VG_(OSetWord_Contains)(encoded_heap_base_addrs,
                                        (UWord)block_base_addr)) {
-             VG_(OSetWord_Insert)(pg_encoded_heap_base_addrs,
+             VG_(OSetWord_Insert)(encoded_heap_base_addrs,
                                   (UWord)block_base_addr);
 
              // scan until we find first UNALLOC address, and use that as
@@ -565,7 +559,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                  VG_(printf)("\n  elt: ");
                  // recurse!
                  ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
-                                    is_mem_defined_func);
+                                    is_mem_defined_func, encoded_heap_base_addrs);
                }
 
                cur_addr += element_size;
@@ -582,19 +576,19 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
       case Te_TyRef:
          vg_assert(0); // unhandled
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
-                            is_mem_defined_func);
+                            is_mem_defined_func, encoded_heap_base_addrs);
          VG_(printf)("&");
          break;
       case Te_TyPtrMbr:
          vg_assert(0); // unhandled
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
-                            is_mem_defined_func);
+                            is_mem_defined_func, encoded_heap_base_addrs);
          VG_(printf)("*");
          break;
       case Te_TyRvalRef:
          vg_assert(0); // unhandled
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
-                            is_mem_defined_func);
+                            is_mem_defined_func, encoded_heap_base_addrs);
          VG_(printf)("&&");
          break;
       case Te_TyEnum:
@@ -637,7 +631,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
               for (Long i = 0; i <= bound_ent->Te.Bound.boundU /* inclusive */; i++) {
                 VG_(printf)("\n    ");
                 ML_(pg_pp_varinfo)(tyents, ent->Te.TyArray.typeR, cur_elt_addr,
-                                   is_mem_defined_func);
+                                   is_mem_defined_func, encoded_heap_base_addrs);
                 cur_elt_addr += element_size;
               }
             }
@@ -681,7 +675,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          }
          */
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyQual.typeR, data_addr,
-                            is_mem_defined_func);
+                            is_mem_defined_func, encoded_heap_base_addrs);
          break;
       case Te_TyVoid:
          vg_assert(0); // unhandled
