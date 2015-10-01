@@ -538,27 +538,14 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                VG_(printf)("\n  UNINIT");
              } else {
                tl_assert(res == 5 /* MC_Ok enum value */);
-               VG_(printf)("\n  elt");
+               VG_(printf)("\n  elt: ");
+               // recurse!
+               ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
+                                  is_mem_defined_func);
              }
 
              cur_addr += element_size;
            }
-           //for (Addr cur_addr = block_base_addr;
-           //     cur_addr < block_base_addr + ai.Addr.Block.block_szB;
-           //     cur_addr += element_size) {
-           //  // check whether this memory has been allocated and/or initialized
-           //  res = is_mem_defined_func(cur_addr, element_size,
-           //                            &bad_addr, &otag);
-           //
-           //   if (res == 6 /* MC_AddrErr enum value */) {
-           //     VG_(printf)(" UNALLOC\n");
-           //   } else if (res == 7 /* MC_ValueErr enum value */) {
-           //     VG_(printf)(" UNINIT\n");
-           //   } else {
-           //     tl_assert(res == 5 /* MC_Ok enum value */);
-           //     VG_(printf)(" elt\n");
-           //   }
-           // }
          } else {
            // if this is any other kind of pointer, simply print out its
            // address and don't dereference it
