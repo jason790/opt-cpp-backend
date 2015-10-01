@@ -597,17 +597,104 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                                                     : "<anonymous>" );
          break;
       case Te_TyStOrUn:
-         vg_assert(0); // unhandled
          VG_(printf)("%s %s",
                      ent->Te.TyStOrUn.isStruct ? "struct" : "union",
                      ent->Te.TyStOrUn.name ? ent->Te.TyStOrUn.name
                                            : "<anonymous>" );
+         // TODO: handle unions later, let's just focus on structs for now
+         vg_assert(ent->Te.TyStOrUn.isStruct);
+
+         // iterate into ent->Te.TyStOrUn.fieldRs
+
+         // copied from describe_type
+#ifdef BLAHBLAH
+         case Te_TyStOrUn: {
+            Word       i;
+            GXResult   res;
+            MaybeULong mul;
+            XArray*    fieldRs;
+            UWord      fieldR;
+            TyEnt*     field = NULL;
+            PtrdiffT   offMin = 0, offMax1 = 0;
+            if (!ty->Te.TyStOrUn.isStruct) goto done;
+            fieldRs = ty->Te.TyStOrUn.fieldRs;
+            if (VG_(sizeXA)(fieldRs) == 0
+                && (ty->Te.TyStOrUn.typeR == 0)) goto done;
+            for (i = 0; i < VG_(sizeXA)( fieldRs ); i++ ) {
+               fieldR = *(UWord*)VG_(indexXA)( fieldRs, i );
+               field = ML_(TyEnts__index_by_cuOff)(tyents, NULL, fieldR);
+               vg_assert(field);
+               vg_assert(field->tag == Te_Field);
+               vg_assert(field->Te.Field.nLoc < 0
+                         || (field->Te.Field.nLoc > 0
+                             && field->Te.Field.pos.loc));
+               if (field->Te.Field.nLoc == -1) {
+                  res.kind = GXR_Addr;
+                  res.word = field->Te.Field.pos.offset;
+               } else {
+                  /* Re data_bias in this call, we should really send in
+                     a legitimate value.  But the expression is expected
+                     to be a constant expression, evaluation of which
+                     will not need to use DW_OP_addr and hence we can
+                     avoid the trouble of plumbing the data bias through
+                     to this point (if, indeed, it has any meaning; from
+                     which DebugInfo would we take the data bias? */
+                   res =  ML_(evaluate_Dwarf3_Expr)(
+                          field->Te.Field.pos.loc, field->Te.Field.nLoc,
+                          NULL/*fbGX*/, NULL/*RegSummary*/,
+                          0/*data_bias*/,
+                          True/*push_initial_zero*/);
+                  if (0) {
+                     VG_(printf)("QQQ ");
+                     ML_(pp_GXResult)(res);
+                     VG_(printf)("\n");
+                  }
+               }
+               if (res.kind != GXR_Addr)
+                  continue;
+               mul = ML_(sizeOfType)( tyents, field->Te.Field.typeR );
+               if (mul.b != True)
+                  goto done; /* size of field is unknown (?!) */
+               offMin  = res.word;
+               offMax1 = offMin + (PtrdiffT)mul.ul;
+               if (offMin == offMax1)
+                  continue;
+               vg_assert(offMin < offMax1);
+               if (offset >= offMin && offset < offMax1)
+                  break;
+            }
+            /* Did we find a suitable field? */
+            vg_assert(i >= 0 && i <= VG_(sizeXA)( fieldRs ));
+            if (i == VG_(sizeXA)( fieldRs )) {
+               ty = ML_(TyEnts__index_by_cuOff)(tyents, NULL,
+                                                   ty->Te.TyStOrUn.typeR);
+               vg_assert(ty);
+               if (ty->tag == Te_UNKNOWN) goto done;
+               vg_assert(ML_(TyEnt__is_type)(ty));
+               continue;
+            }
+            /* Yes.  'field' is it. */
+            vg_assert(field);
+            if (!field->Te.Field.name) goto done;
+            VG_(addBytesToXA)( xa, ".", 1 );
+            VG_(addBytesToXA)( xa, field->Te.Field.name,
+                               VG_(strlen)(field->Te.Field.name) );
+            offset -= offMin;
+            ty = ML_(TyEnts__index_by_cuOff)(tyents, NULL,
+                                             field->Te.Field.typeR );
+            vg_assert(ty);
+            if (ty->tag == Te_UNKNOWN) goto done;
+            /* keep going; look inside the field. */
+            break;
+         }
+#endif
+
          break;
       case Te_TyArray:
-         // an array with a known size, yay!
-         VG_(printf)("[array] ");
-
          if (ent->Te.TyArray.boundRs) {
+            // an array with a known size, yay!
+            VG_(printf)("[array %p] ", (void*)data_addr);
+
             XArray* xa = ent->Te.TyArray.boundRs;
             // TODO: handle multi-dimensional arrays; right now we handle only 1-D
             // for simplicity
@@ -656,9 +743,10 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          }
          break;
       case Te_TyTyDef:
-         vg_assert(0); // unhandled
-         VG_(printf)("%s", ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name
-                                                : "<anonymous>" );
+         // typedef -- directly recurse into the typeR field
+         VG_(printf)("typedef %s\n", ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name : "<anonymous>" );
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyTyDef.typeR, data_addr,
+                            is_mem_defined_func, encoded_heap_base_addrs);
          break;
       case Te_TyFn:
          vg_assert(0); // unhandled

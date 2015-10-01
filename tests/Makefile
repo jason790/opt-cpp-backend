@@ -1,4 +1,4 @@
-all: basic meng-thesis-example array-overflow array-param
+all: basic meng-thesis-example array-overflow array-param struct-basic
 
 %: %.c
 	gcc -ggdb -O0 -fno-omit-frame-pointer $< -o $@
