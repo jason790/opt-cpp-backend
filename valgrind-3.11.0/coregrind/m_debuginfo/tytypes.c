@@ -46,6 +46,9 @@
 
 #include "pub_core_execontext.h" // pgbovine
 #include "pub_core_addrinfo.h" // pgbovine
+#include "pub_core_oset.h" // pgbovine
+
+#include "pub_tool_mallocfree.h" // pgbovine - potential abstration violation with _tool_.h include, ergh
 
 /* Does this TyEnt denote a type, as opposed to some other kind of
    thing? */
@@ -379,6 +382,10 @@ SizeT pg_get_elt_size(TyEnt* ent)
   vg_assert(0); // unhandled
 }
 
+
+// pgbovine - heap base block addresses that have already been encoded
+OSet* pg_encoded_heap_base_addrs = NULL;
+
 // pgbovine version of ML_(pp_TyEnt_C_ishly)
 void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                          UWord cuOff,
@@ -507,10 +514,6 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          // and traverse it so that we can visualize it. then we also
          // need to print the pointer value so that the visualization
          // knows to draw an arrow to there.
-         //
-         // TODO: keep track of what heap base addresses have alerady
-         // been traversed, so that we avoid duplication and infinite
-         // loops for circular structures
 
          AddrInfo ai;
          VG_(describe_addr)(ptr_val, &ai);
@@ -531,28 +534,44 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                        (int)ai.Addr.Block.rwoffset /* offset in bytes */,
                        (int)element_size);
 
-           // scan until we find first UNALLOC address, and use that as
-           // the upper bound of the heap array
-           // TODO: any risk of overrun into other blocks? hopefully
-           // not, due to redzones
-           Addr cur_addr = block_base_addr;
-           while (1) {
-             res = is_mem_defined_func(cur_addr, element_size,
-                                       &bad_addr, &otag);
-             if (res == 6 /* MC_AddrErr enum value */) {
-               VG_(printf)("\n  UNALLOC");
-               break; // break on first unallocated byte
-             } else if (res == 7 /* MC_ValueErr enum value */) {
-               VG_(printf)("\n  UNINIT");
-             } else {
-               tl_assert(res == 5 /* MC_Ok enum value */);
-               VG_(printf)("\n  elt: ");
-               // recurse!
-               ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
-                                  is_mem_defined_func);
-             }
+           if (!pg_encoded_heap_base_addrs) {
+             pg_encoded_heap_base_addrs = VG_(OSetWord_Create)(VG_(malloc),
+                                                               "pg_encoded_heap_base_addrs",
+                                                               VG_(free));
+           }
 
-             cur_addr += element_size;
+           // avoid rendering duplicates, to prevent redundancies and
+           // infinite loops
+           if (!VG_(OSetWord_Contains)(pg_encoded_heap_base_addrs,
+                                       (UWord)block_base_addr)) {
+             VG_(OSetWord_Insert)(pg_encoded_heap_base_addrs,
+                                  (UWord)block_base_addr);
+
+             // scan until we find first UNALLOC address, and use that as
+             // the upper bound of the heap array
+             // TODO: any risk of overrun into other blocks? hopefully
+             // not, due to redzones
+             Addr cur_addr = block_base_addr;
+             while (1) {
+               res = is_mem_defined_func(cur_addr, element_size,
+                                         &bad_addr, &otag);
+               if (res == 6 /* MC_AddrErr enum value */) {
+                 VG_(printf)("\n  UNALLOC");
+                 break; // break on first unallocated byte
+               } else if (res == 7 /* MC_ValueErr enum value */) {
+                 VG_(printf)("\n  UNINIT");
+               } else {
+                 tl_assert(res == 5 /* MC_Ok enum value */);
+                 VG_(printf)("\n  elt: ");
+                 // recurse!
+                 ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
+                                    is_mem_defined_func);
+               }
+
+               cur_addr += element_size;
+             }
+           } else {
+             VG_(printf)("heap pointer already encoded!\n");
            }
          } else {
            // if this is any other kind of pointer, simply print out its
@@ -652,14 +671,16 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          VG_(printf)("%s", "<function_type>");
          break;
       case Te_TyQual:
-         vg_assert(0); // unhandled
+         // PG - ignore qualifiers and traverse inward!
+         /*
          switch (ent->Te.TyQual.qual) {
             case 'C': VG_(printf)("const "); break;
             case 'V': VG_(printf)("volatile "); break;
             case 'R': VG_(printf)("restrict "); break;
             default: goto unhandled;
          }
-         ML_(pg_pp_varinfo)(tyents, ent->Te.TyQual.typeR, data_addr /* stent */,
+         */
+         ML_(pg_pp_varinfo)(tyents, ent->Te.TyQual.typeR, data_addr,
                             is_mem_defined_func);
          break;
       case Te_TyVoid:

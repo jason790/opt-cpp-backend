@@ -1,5 +1,7 @@
 #include <stdlib.h>
 
+// cool, seems like debug info treats both params as pointers and not
+// array types
 int arrayParams(short short_array[5] /* incorrect bound */, char char_array[]) {
   return 0;
 }
