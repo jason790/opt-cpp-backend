@@ -6261,8 +6261,10 @@ void pg_trace_inst(Addr a)
   // adapted from ../coregrind/m_addrinfo.c
   const HChar *file;
   Bool hasfile = VG_(get_filename)(a, &file);
-  if (hasfile && VG_STREQ(file, "basic.c" /* HARDCODED! */)) {
-  //if (hasfile && VG_STREQ(file, "meng-thesis-example.c" /* HARDCODED! */)) {
+
+  // only trace instructions in pg_source_filename, which was
+  // initialized with the --source-filename option
+  if (hasfile && VG_STREQ(file, pg_source_filename)) {
     Vg_FnNameKind kind = VG_(get_fnname_kind_from_IP)(a);
     const HChar *fn;
     Bool hasfn = VG_(get_fnname)(a, &fn);

@@ -5709,6 +5709,8 @@ static const HChar * MC_(parse_leak_heuristics_tokens) =
    a fake heuristic used to collect the blocks found without any
    heuristic. */
 
+static Bool pg_source_filename_init = False;
+
 static Bool mc_process_cmd_line_options(const HChar* arg)
 {
    const HChar* tmp_str;
@@ -5801,6 +5803,12 @@ static Bool mc_process_cmd_line_options(const HChar* arg)
                             MC_(clo_leak_resolution), Vg_MedRes) {}
    else if VG_XACT_CLO(arg, "--leak-resolution=high",
                             MC_(clo_leak_resolution), Vg_HighRes) {}
+
+   // pgbovine
+   else if VG_STR_CLO(arg, "--source-filename", tmp_str) {
+     VG_(strcpy)(pg_source_filename, tmp_str);
+     pg_source_filename_init = True;
+   }
 
    else if VG_STR_CLO(arg, "--ignore-ranges", tmp_str) {
       Bool ok = parse_ignore_ranges(tmp_str);
@@ -7372,6 +7380,8 @@ static void ocache_sarp_Clear_Origins ( Addr a, UWord len ) {
 
 static void mc_post_clo_init ( void )
 {
+   tl_assert(pg_source_filename_init); // pgbovine -- requires this!
+
    /* If we've been asked to emit XML, mash around various other
       options so as to constrain the output somewhat. */
    if (VG_(clo_xml)) {

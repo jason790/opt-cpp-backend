@@ -398,7 +398,6 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
    switch (ent->tag) {
       case Te_TyBase:
          if (!ent->Te.TyBase.name) goto unhandled;
-         //VG_(printf)("%s", ent->Te.TyBase.name);
 
          // check whether this memory has been allocated and/or initialized
          res = is_mem_defined_func(data_addr, ent->Te.TyBase.szB,
@@ -508,6 +507,10 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          // and traverse it so that we can visualize it. then we also
          // need to print the pointer value so that the visualization
          // knows to draw an arrow to there.
+         //
+         // TODO: keep track of what heap base addresses have alerady
+         // been traversed, so that we avoid duplication and infinite
+         // loops for circular structures
 
          AddrInfo ai;
          VG_(describe_addr)(ptr_val, &ai);
