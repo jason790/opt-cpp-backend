@@ -604,9 +604,24 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          // TODO: handle unions later, let's just focus on structs for now
          vg_assert(ent->Te.TyStOrUn.isStruct);
 
-         // iterate into ent->Te.TyStOrUn.fieldRs
+         // iterate into ent->Te.TyStOrUn.fieldRs to print all fields
+         XArray* fieldRs = ent->Te.TyStOrUn.fieldRs;
 
-         // copied from describe_type
+         // adapted from describe_type()
+         for (int i = 0; i < VG_(sizeXA)( fieldRs ); i++) {
+           UWord fieldR = *(UWord*)VG_(indexXA)( fieldRs, i );
+           TyEnt* field = ML_(TyEnts__index_by_cuOff)(tyents, NULL, fieldR);
+           vg_assert(field && field->tag == Te_Field);
+
+           // TODO: handle unions later, let's just focus on structs for now
+           vg_assert(field->Te.Field.isStruct);
+           // TODO: how should we handle nLoc >= 0?
+           vg_assert(field->Te.Field.nLoc == -1);
+
+           VG_(printf)("\nFIELD %s offset: %d", field->Te.Field.name, field->Te.Field.pos.offset);
+         }
+
+         // copied from describe_type()
 #ifdef BLAHBLAH
          case Te_TyStOrUn: {
             Word       i;
