@@ -511,14 +511,40 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          if (ai.tag == Addr_Block) {
            // if this is a heap pointer ...
 
-           // look for the beginning of the block -- there should be an
-           // offset field, right?
+           TyEnt* element_ent = ML_(TyEnts__index_by_cuOff)(tyents, NULL, ent->Te.TyPorR.typeR);
+           SizeT element_size = pg_get_elt_size(element_ent);
+
            Addr block_base_addr = ptr_val - ai.Addr.Block.rwoffset;
-           VG_(printf)("<heap ptr %p, sz: %d, base: %p, off: %d>", (void*)ptr_val,
+           VG_(printf)("<heap ptr %p, sz: %d, base: %p, off: %d, eltsize: %d>", (void*)ptr_val,
                        ai.Addr.Block.block_szB /* total block size in bytes; doesn't mean
                                                   all has been allocated by malloc, tho */,
                        (void*)block_base_addr,
-                       ai.Addr.Block.rwoffset /* offset in bytes */);
+                       ai.Addr.Block.rwoffset /* offset in bytes */,
+                       element_size);
+
+           // look through the entire block until we find the first
+           // UNALLOC; that's the "bound" of the heap "array". if we
+           // can't find the bound, then use the entire block.
+           // TODO: can allocations ever be split into MULTIPLE block
+           // objects?!? if so, we might not get the full array here.
+
+           // crap, infinite loops?!?
+           //for (Addr cur_addr = block_base_addr;
+           //     cur_addr < cur_addr + ai.Addr.Block.block_szB;
+           //     cur_addr += element_size) {
+           //  // check whether this memory has been allocated and/or initialized
+           //  res = is_mem_defined_func(cur_addr, element_size,
+           //                            &bad_addr, &otag);
+           //
+           //   if (res == 6 /* MC_AddrErr enum value */) {
+           //     VG_(printf)(" UNALLOC\n");
+           //   } else if (res == 7 /* MC_ValueErr enum value */) {
+           //     VG_(printf)(" UNINIT\n");
+           //   } else {
+           //     tl_assert(res == 5 /* MC_Ok enum value */);
+           //     VG_(printf)(" elt\n");
+           //   }
+           // }
          } else {
            // if this is any other kind of pointer, simply print out its
            // address and don't dereference it
