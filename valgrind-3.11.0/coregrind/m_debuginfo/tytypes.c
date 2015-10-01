@@ -515,22 +515,36 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            SizeT element_size = pg_get_elt_size(element_ent);
 
            Addr block_base_addr = ptr_val - ai.Addr.Block.rwoffset;
-           VG_(printf)("<heap ptr %p, sz: %d, base: %p, off: %d, eltsize: %d>", (void*)ptr_val,
-                       ai.Addr.Block.block_szB /* total block size in bytes; doesn't mean
-                                                  all has been allocated by malloc, tho */,
+           VG_(printf)("<heap ptr %p, sz: %d, base: %p, off: %d, eltsize: %d>",
+                       (void*)ptr_val,
+                       (int)ai.Addr.Block.block_szB /* total block size in bytes; doesn't mean
+                                                       all has been allocated by malloc, tho */,
                        (void*)block_base_addr,
-                       ai.Addr.Block.rwoffset /* offset in bytes */,
-                       element_size);
+                       (int)ai.Addr.Block.rwoffset /* offset in bytes */,
+                       (int)element_size);
 
-           // look through the entire block until we find the first
-           // UNALLOC; that's the "bound" of the heap "array". if we
-           // can't find the bound, then use the entire block.
-           // TODO: can allocations ever be split into MULTIPLE block
-           // objects?!? if so, we might not get the full array here.
+           // scan until we find first UNALLOC address, and use that as
+           // the upper bound of the heap array
+           // TODO: any risk of overrun into other blocks? hopefully
+           // not, due to redzones
+           Addr cur_addr = block_base_addr;
+           while (1) {
+             res = is_mem_defined_func(cur_addr, element_size,
+                                       &bad_addr, &otag);
+             if (res == 6 /* MC_AddrErr enum value */) {
+               VG_(printf)("\n  UNALLOC");
+               break; // break on first unallocated byte
+             } else if (res == 7 /* MC_ValueErr enum value */) {
+               VG_(printf)("\n  UNINIT");
+             } else {
+               tl_assert(res == 5 /* MC_Ok enum value */);
+               VG_(printf)("\n  elt");
+             }
 
-           // crap, infinite loops?!?
+             cur_addr += element_size;
+           }
            //for (Addr cur_addr = block_base_addr;
-           //     cur_addr < cur_addr + ai.Addr.Block.block_szB;
+           //     cur_addr < block_base_addr + ai.Addr.Block.block_szB;
            //     cur_addr += element_size) {
            //  // check whether this memory has been allocated and/or initialized
            //  res = is_mem_defined_func(cur_addr, element_size,
