@@ -404,10 +404,10 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          res = is_mem_defined_func(data_addr, ent->Te.TyBase.szB,
                                        &bad_addr, &otag);
          if (res == 6 /* MC_AddrErr enum value */) {
-           VG_(printf)(" UNALLOC");
+           VG_(printf)("  UNALLOC");
            return; // early!
          } else if (res == 7 /* MC_ValueErr enum value */) {
-           VG_(printf)(" UNINIT");
+           VG_(printf)("  UNINIT");
            return; // early!
          } else {
            tl_assert(res == 5 /* MC_Ok enum value */);
@@ -421,8 +421,13 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
 
          if (ent->Te.TyBase.enc == 'S') {
            if (ent->Te.TyBase.szB == sizeof(char)) {
-             // TODO: print as a character or an int?!?
-             VG_(printf)(" val=%c", *((char*)data_addr));
+             char val = *((char*)data_addr);
+             // special-case printing
+             if (val == '\0') {
+               VG_(printf)(" val=\\0");
+             } else {
+               VG_(printf)(" val=%c", val);
+             }
            } else if (ent->Te.TyBase.szB == sizeof(short)) {
              VG_(printf)(" val=%d", *((short*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(int)) {
@@ -603,9 +608,12 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
             if (bound_ent->Te.Bound.knownL && bound_ent->Te.Bound.knownU
                 && bound_ent->Te.Bound.boundL == 0) {
               // yay, an array with known bounds!
-              VG_(printf)("[%lld]", 1 + bound_ent->Te.Bound.boundU);
+
+              //VG_(printf)("[%lld]", 1 + bound_ent->Te.Bound.boundU);
+
               Addr cur_elt_addr = data_addr;
               for (Long i = 0; i <= bound_ent->Te.Bound.boundU /* inclusive */; i++) {
+                VG_(printf)("\n    ");
                 ML_(pg_pp_varinfo)(tyents, ent->Te.TyArray.typeR, cur_elt_addr,
                                    is_mem_defined_func);
                 cur_elt_addr += element_size;
