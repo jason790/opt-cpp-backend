@@ -510,7 +510,15 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          // and not much else (e.g., stack, globals, literals) :/
          if (ai.tag == Addr_Block) {
            // if this is a heap pointer ...
-           VG_(printf)("<heap ptr %p>", (void*)ptr_val);
+
+           // look for the beginning of the block -- there should be an
+           // offset field, right?
+           Addr block_base_addr = ptr_val - ai.Addr.Block.rwoffset;
+           VG_(printf)("<heap ptr %p, sz: %d, base: %p, off: %d>", (void*)ptr_val,
+                       ai.Addr.Block.block_szB /* total block size in bytes; doesn't mean
+                                                  all has been allocated by malloc, tho */,
+                       (void*)block_base_addr,
+                       ai.Addr.Block.rwoffset /* offset in bytes */);
          } else {
            // if this is any other kind of pointer, simply print out its
            // address and don't dereference it
