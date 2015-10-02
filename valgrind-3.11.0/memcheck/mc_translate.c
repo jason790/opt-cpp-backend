@@ -6287,6 +6287,8 @@ void pg_trace_inst(Addr a)
                 haslinenum ? linenum : -1,
                 (int)kind);
 
+    // TODO: print globals
+
     //VG_(get_and_pp_StackTrace)(VG_(get_running_tid)(), 100); // TODO: decompose this into parts
 
     Addr ips[100];
@@ -6340,8 +6342,6 @@ void pg_trace_inst(Addr a)
 
         VG_(deleteXA)(blocks);
       }
-
-      // TODO: similar for global blocks? see include/pub_tool_debuginfo.h
     }
 
     VG_(printf)("\n");
