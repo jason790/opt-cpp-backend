@@ -6287,10 +6287,6 @@ void pg_trace_inst(Addr a)
                 haslinenum ? linenum : -1,
                 (int)kind);
 
-    // TODO: print globals
-
-    //VG_(get_and_pp_StackTrace)(VG_(get_running_tid)(), 100); // TODO: decompose this into parts
-
     Addr ips[100];
     Addr sps[100];
     Addr fps[100];
@@ -6299,6 +6295,27 @@ void pg_trace_inst(Addr a)
                                            sps,
                                            fps,
                                            0);
+
+    tl_assert(stack_depth > 0);
+
+    Addr top_ip = ips[0];
+
+    // traverse globals
+    // adapted from exp-sgcheck/sg_main.c acquire_globals()
+    UWord di_handle = pg_get_di_handle_at_ip(top_ip);
+
+    XArray* /* of GlobalBlock */ gbs = VG_(di_get_global_blocks_from_dihandle)(di_handle, False);
+    VG_(printf)("   GOT %ld globals\n", VG_(sizeXA)( gbs ));
+
+    Word n = VG_(sizeXA)( gbs );
+    for (Word i = 0; i < n; i++) {
+       GlobalBlock* gb = VG_(indexXA)( gbs, i );
+       if (0) VG_(printf)("   new Global size %2lu at %#lx:  %s %s\n",
+                          gb->szB, gb->addr, gb->soname, gb->name );
+       tl_assert(gb->szB > 0);
+    }
+    VG_(deleteXA)( gbs );
+
     for (UInt i = 0; i < stack_depth; i++) {
       Addr cur_ip = ips[i];
       Addr cur_sp = sps[i];

@@ -4206,6 +4206,57 @@ VG_(di_get_stack_blocks_at_ip)( Addr ip, Bool arrays_only )
 }
 
 
+// pgbovine - adapted from VG_(di_get_stack_blocks_at_ip)
+UWord pg_get_di_handle_at_ip(Addr ip)
+{
+   /* This is a derivation of consider_vars_in_frame() above. */
+   DebugInfo* di;
+   Bool debug = False;
+
+   static UInt n_search = 0;
+   static UInt n_steps = 0;
+   n_search++;
+   if (debug)
+      VG_(printf)("QQQQ: dgsbai: ip %#lx\n", ip);
+   /* first, find the DebugInfo that pertains to 'ip'. */
+   for (di = debugInfo_list; di; di = di->next) {
+      n_steps++;
+      /* text segment missing? unlikely, but handle it .. */
+      if (!di->text_present || di->text_size == 0)
+         continue;
+      /* Ok.  So does this text mapping bracket the ip? */
+      if (di->text_avma <= ip && ip < di->text_avma + di->text_size)
+         break;
+   }
+
+   /* Didn't find it.  Strange -- means ip is a code address outside
+      of any mapped text segment.  Unlikely but not impossible -- app
+      could be generating code to run. */
+   if (!di)
+      return 0; /* currently empty */
+
+   if (0 && ((n_search & 0x1) == 0))
+      VG_(printf)("VG_(di_get_stack_blocks_at_ip): %u searches, "
+                  "%u DebugInfos looked at\n",
+                  n_search, n_steps);
+   /* Start of performance-enhancing hack: once every ??? (chosen
+      hackily after profiling) successful searches, move the found
+      DebugInfo one step closer to the start of the list.  This makes
+      future searches cheaper. */
+   if ((n_search & 0xFFFF) == 0) {
+      /* Move si one step closer to the start of the list. */
+      move_DebugInfo_one_step_forward( di );
+   }
+   /* End of performance-enhancing hack. */
+
+   /* any var info at all? */
+   if (!di->varinfo)
+      return 0; /* currently empty */
+
+   return di->handle;
+}
+
+
 /* Get an array of GlobalBlock which describe the global blocks owned
    by the shared object characterised by the given di_handle.  Asserts
    if the handle is invalid.  The caller is responsible for freeing

@@ -189,6 +189,7 @@ typedef
 extern XArray* /* of StackBlock */
 VG_(di_get_stack_blocks_at_ip)( Addr ip, Bool arrays_only );
 
+UWord pg_get_di_handle_at_ip(Addr ip); // pgbovine
 
 /* Get an array of GlobalBlock which describe the global blocks owned
    by the shared object characterised by the given di_handle.  Asserts
