@@ -6299,20 +6299,29 @@ void pg_trace_inst(Addr a)
     tl_assert(stack_depth > 0);
 
     Addr top_ip = ips[0];
+    //Addr top_sp = sps[0];
+    //Addr top_fp = fps[0];
 
     // traverse globals
     // adapted from exp-sgcheck/sg_main.c acquire_globals()
     UWord di_handle = pg_get_di_handle_at_ip(top_ip);
 
     XArray* /* of GlobalBlock */ gbs = VG_(di_get_global_blocks_from_dihandle)(di_handle, False);
-    VG_(printf)("   GOT %ld globals\n", VG_(sizeXA)( gbs ));
-
     Word n = VG_(sizeXA)( gbs );
+    VG_(printf)("   GOT %ld globals\n", n);
     for (Word i = 0; i < n; i++) {
-       GlobalBlock* gb = VG_(indexXA)( gbs, i );
-       if (0) VG_(printf)("   new Global size %2lu at %#lx:  %s %s\n",
-                          gb->szB, gb->addr, gb->soname, gb->name );
-       tl_assert(gb->szB > 0);
+      GlobalBlock* gb = VG_(indexXA)( gbs, i );
+      VG_(printf)("   new Global size %2lu at %#lx: soname: %s, name: %s, isVec: %d\n",
+                  gb->szB, gb->addr, gb->soname, gb->name, (int)gb->isVec);
+      tl_assert(gb->szB > 0);
+
+
+      // TODO: see VG_(di_get_global_blocks_from_dihandle) ( ULong di_handle, Bool  arrays_only )
+      // for how to grab the var out, which has its own var->typeR
+
+      // TODO: do a traverse of gb->addr
+      //VG_(pg_traverse_local_var)(gb->addr, top_ip, top_sp, top_fp,
+      //                           is_mem_defined, pg_encoded_heap_base_addrs);
     }
     VG_(deleteXA)( gbs );
 
