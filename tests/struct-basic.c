@@ -5,9 +5,9 @@
 // regular
 struct Account {
    int account_number;
+   double balance;
    char *first_name;
    char *last_name;
-   float balance;
 };
 
 // typedef version
@@ -19,9 +19,9 @@ typedef struct {
 int main() {
   struct Account my_account;
   my_account.account_number = 42;
+  my_account.balance = 3.141592653589793238462643383279502884197169399375105820974944592307816406286;
   my_account.first_name = "Philip";
   my_account.last_name = "Guo";
-  my_account.balance = 3.14159;
 
   Point my_point;
   my_point.xxx = 12345;

@@ -459,11 +459,13 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          } else if (ent->Te.TyBase.enc == 'F') {
            // careful about subtleties around floats and doubles and stuff ..
            if (ent->Te.TyBase.szB == sizeof(float)) {
-             VG_(printf)(" val=%.2f", *((float*)data_addr));
+             VG_(printf)(" val=%f", *((float*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(double)) {
-             VG_(printf)(" val=%.2f", *((double*)data_addr));
+             VG_(printf)(" val=%f", *((double*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(long double)) {
-             VG_(printf)(" val=%.2Lf", *((long double*)data_addr));
+             // TODO: doesn't currently work for some reason :(
+             // long doubles are shown as uninit
+             VG_(printf)(" val=%Lf", *((long double*)data_addr));
            } else {
              // what other stuff is here?!?
              vg_assert(0);
@@ -618,7 +620,14 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            // TODO: how should we handle nLoc >= 0?
            vg_assert(field->Te.Field.nLoc == -1);
 
-           VG_(printf)("\nFIELD %s offset: %d", field->Te.Field.name, field->Te.Field.pos.offset);
+           Addr field_base_addr = data_addr + field->Te.Field.pos.offset;
+           VG_(printf)("\nFIELD %s offset: %d\n  ",
+                       field->Te.Field.name,
+                       (int)field->Te.Field.pos.offset);
+
+           // recurse!
+           ML_(pg_pp_varinfo)(tyents, field->Te.Field.typeR, field_base_addr,
+                              is_mem_defined_func, encoded_heap_base_addrs);
          }
 
          // copied from describe_type()
