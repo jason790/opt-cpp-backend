@@ -517,8 +517,6 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
 
          AddrInfo ai;
          VG_(describe_addr)(ptr_val, &ai);
-         // this seems to be reliable only for detecting potential heap blocks
-         // and not much else (e.g., stack, globals, literals) :/
          if (ai.tag == Addr_Block) {
            // if this is a heap pointer ...
 
@@ -536,8 +534,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
 
            vg_assert(encoded_heap_base_addrs);
 
-           // avoid rendering duplicates, to prevent redundancies and
-           // infinite loops
+           // avoid rendering duplicates, to prevent redundancies and infinite loops
            if (!VG_(OSetWord_Contains)(encoded_heap_base_addrs,
                                        (UWord)block_base_addr)) {
              VG_(OSetWord_Insert)(encoded_heap_base_addrs,
@@ -569,10 +566,59 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            } else {
              VG_(printf)("heap pointer already encoded!\n");
            }
+         } else if (ai.tag == Addr_SegmentKind) {
+           // this is a pointer to some global client area, i think
+           //
+           // there aren't any redzones, so use heuristics to figure
+           // out what to print out here. the most common is a string
+           // literal like "hello world", so in that case, just end
+           // at the null terminator.
+           VG_(printf)("<client segment ptr %p, tag: %d R:%d, W:%d, X:%d>", (void*)ptr_val,
+                       (int)ai.tag,
+                       (int)ai.Addr.SegmentKind.hasR,
+                       (int)ai.Addr.SegmentKind.hasW,
+                       (int)ai.Addr.SegmentKind.hasX);
+
+           // avoid rendering duplicates, to prevent redundancies and infinite loops
+           if (!VG_(OSetWord_Contains)(encoded_heap_base_addrs,
+                                       (UWord)ptr_val)) {
+             VG_(OSetWord_Insert)(encoded_heap_base_addrs, (UWord)ptr_val);
+
+             TyEnt* element_ent = ML_(TyEnts__index_by_cuOff)(tyents, NULL, ent->Te.TyPorR.typeR);
+             SizeT element_size = pg_get_elt_size(element_ent);
+
+             // only try to print out string literals like "hello world"
+             if (element_ent->tag == Te_TyBase &&
+                 element_ent->Te.TyBase.enc == 'S' &&
+                 element_ent->Te.TyBase.szB == sizeof(char)) {
+               Addr cur_addr = ptr_val;
+               while (1) {
+                 res = is_mem_defined_func(cur_addr, element_size,
+                                           &bad_addr, &otag);
+                 if (res == 6 /* MC_AddrErr enum value */) {
+                   VG_(printf)("\n  UNALLOC");
+                   break; // break on first unallocated byte
+                 } else if (res == 7 /* MC_ValueErr enum value */) {
+                   VG_(printf)("\n  UNINIT");
+                 } else {
+                   tl_assert(res == 5 /* MC_Ok enum value */);
+                   VG_(printf)("\n  elt: ");
+                   // recurse!
+                   ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
+                                      is_mem_defined_func, encoded_heap_base_addrs);
+
+                   // if it's a '\0' character, then BREAK out of the
+                   // loop since that terminates the string
+                   if (*((char*)cur_addr) == '\0') {
+                     break;
+                   }
+                 }
+                 cur_addr += element_size;
+               }
+             }
+           }
          } else {
-           // if this is any other kind of pointer, simply print out its
-           // address and don't dereference it
-           VG_(printf)("<other ptr %p>", (void*)ptr_val);
+           VG_(printf)("<other ptr %p, tag: %d>", (void*)ptr_val, (int)ai.tag);
          }
          break;
       case Te_TyRef:
