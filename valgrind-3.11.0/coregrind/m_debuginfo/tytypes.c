@@ -564,7 +564,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
 
              VG_(printf)(", \"deref_val\":\n");
 
-             VG_(printf)("  {\"addr\":\"%p\", \"kind\":\"heap_block\", \"val\": [\n",
+             VG_(printf)("{\"addr\":\"%p\", \"kind\":\"heap_block\", \"val\": [\n  ",
                          (void*)block_base_addr);
 
              // scan until we find first UNALLOC address, and use that as
@@ -584,7 +584,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                if (first) {
                  first = False;
                } else {
-                 VG_(printf)(",\n");
+                 VG_(printf)(",\n  ");
                }
                ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
                                   is_mem_defined_func, encoded_addrs);
