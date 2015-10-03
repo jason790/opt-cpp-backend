@@ -6306,22 +6306,52 @@ void pg_trace_inst(Addr a)
 
     XArray* /* of GlobalBlock */ gbs = VG_(di_get_global_blocks_from_dihandle)(di_handle, False);
     Word n = VG_(sizeXA)( gbs );
-    VG_(printf)("GOT %ld globals\n", n);
-    for (Word i = 0; i < n; i++) {
+    Word i;
+    Bool first_elt = True;
+
+    VG_(printf)("\n\"globals\": {");
+    for (i = 0; i < n; i++) {
       GlobalBlock* gb = VG_(indexXA)( gbs, i );
       //VG_(printf)("  GLOBAL size %2lu at %#lx: fullname: %s, isVec: %d\n",
       //            gb->szB, gb->addr,
       //            gb->fullname, (int)gb->isVec);
       tl_assert(gb->szB > 0);
 
+      if (first_elt) {
+        first_elt = False;
+      } else {
+        VG_(printf)(",");
+      }
+
       Bool res = VG_(pg_traverse_global_var)(gb->fullname, gb->addr, is_mem_defined, pg_encoded_addrs);
       tl_assert(res);
     }
+    VG_(printf)("},\n");
 
-    // TODO: print out an ordered list of globals since object keys have no order
+    // print out an ordered list of globals since object keys have no order
+    VG_(printf)("\"ordered_globals\": [");
+    first_elt = True;
+    for (i = 0; i < n; i++) {
+      GlobalBlock* gb = VG_(indexXA)( gbs, i );
+      //VG_(printf)("  GLOBAL size %2lu at %#lx: fullname: %s, isVec: %d\n",
+      //            gb->szB, gb->addr,
+      //            gb->fullname, (int)gb->isVec);
+      tl_assert(gb->szB > 0);
+
+      if (first_elt) {
+        first_elt = False;
+      } else {
+        VG_(printf)(",");
+      }
+      VG_(printf)("\"%s\"", gb->fullname);
+    }
+    VG_(printf)("],\n");
+
     VG_(deleteXA)( gbs );
 
-    for (UInt i = 0; i < stack_depth; i++) {
+    VG_(printf)("\"stack\": [\n");
+    Bool first_stack_entry = True;
+    for (i = 0; i < stack_depth; i++) {
       Addr cur_ip = ips[i];
       Addr cur_sp = sps[i];
       Addr cur_fp = fps[i];
@@ -6331,17 +6361,31 @@ void pg_trace_inst(Addr a)
         break;
       }
 
-      const HChar *cur_file;
-      Bool cur_hasfile = VG_(get_filename)(cur_ip, &cur_file);
+
+      if (first_stack_entry) {
+        first_stack_entry = False;
+      } else {
+        VG_(printf)(",");
+      }
+
+      VG_(printf)("{");
+
+      //const HChar *cur_file;
+      //Bool cur_hasfile = VG_(get_filename)(cur_ip, &cur_file);
       const HChar *cur_fn;
       Bool cur_hasfn = VG_(get_fnname)(cur_ip, &cur_fn);
       UInt cur_linenum;
       Bool cur_haslinenum = VG_(get_linenum)(cur_ip, &cur_linenum);
 
-      VG_(printf)("%u - Kind: %d, IP: %p, %s:%s(%d), SP: %p, FP: %p\n",
-                  i, ip_kind,
-                  (void*)cur_ip,
-                  cur_hasfile ? cur_file : "???",
+      //VG_(printf)("%u - Kind: %d, IP: %p, %s:%s(%d), SP: %p, FP: %p\n",
+      //            i, ip_kind,
+      //            (void*)cur_ip,
+      //            cur_hasfile ? cur_file : "???",
+      //            cur_hasfn ? cur_fn : "???",
+      //            cur_haslinenum ? cur_linenum : -999,
+      //            (void*)cur_sp, (void*)cur_fp);
+
+      VG_(printf)("\"func_name\":\"%s\", \"line\": %u, \"SP\": \"%p\",  \"FP\": \"%p\", ",
                   cur_hasfn ? cur_fn : "???",
                   cur_haslinenum ? cur_linenum : -999,
                   (void*)cur_sp, (void*)cur_fp);
@@ -6349,22 +6393,47 @@ void pg_trace_inst(Addr a)
       // stack blocks
       XArray* blocks = VG_(di_get_stack_blocks_at_ip)(cur_ip, False);
       if (blocks) {
-        for (int j = 0; j < VG_(sizeXA)(blocks); j++) {
+        VG_(printf)(", \"locals\": {\n");
+        first_elt = True;
+        int j;
+        for (j = 0; j < VG_(sizeXA)(blocks); j++) {
           StackBlock* sb = VG_(indexXA)(blocks, j);
           Addr var_addr = sb->spRel ? cur_sp + sb->base : cur_fp + sb->base;
           //VG_(printf)("  sb %d: %s | base: %d, szB: %d, spRel: %d, isVec: %d | %p\n", j, sb->name,
           //            sb->base, sb->szB, sb->spRel, sb->isVec,
           //            (void*)var_addr);
-          Bool res = VG_(pg_traverse_local_var)(sb->fullname, var_addr, cur_ip, cur_sp, cur_fp,
+          if (first_elt) {
+            first_elt = False;
+          } else {
+            VG_(printf)(",");
+          }
+
+          bool res = VG_(pg_traverse_local_var)(sb->fullname, var_addr, cur_ip, cur_sp, cur_fp,
                                                 is_mem_defined, pg_encoded_addrs);
           tl_assert(res);
         }
+        VG_(printf)("}");
 
-        // TODO: print out an ordered list of locals since object keys have no order
+        // print out an ordered list of locals since object keys have no order
+        VG_(printf)(",\n\"ordered_varnames\": [");
+        first_elt = True;
+        for (j = 0; j < VG_(sizeXA)(blocks); j++) {
+          StackBlock* sb = VG_(indexXA)(blocks, j);
+          if (first_elt) {
+            first_elt = False;
+          } else {
+            VG_(printf)(",");
+          }
+          VG_(printf)("\"%s\"", sb->fullname);
+        }
+        VG_(printf)("]");
 
         VG_(deleteXA)(blocks);
       }
+
+      VG_(printf)("}");
     }
+    VG_(printf)("]\n");
 
     VG_(printf)("\n");
 

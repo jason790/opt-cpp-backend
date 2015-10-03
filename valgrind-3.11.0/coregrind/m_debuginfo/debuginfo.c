@@ -5145,8 +5145,7 @@ Bool VG_(pg_traverse_local_var) (const HChar* varname, Addr data_addr,
                                      var, &regs,
                                      data_addr, di )) {
             // pgbovine
-            VG_(printf)("  %s", varname);
-            VG_(printf)("    ");
+            VG_(printf)("  \"%s\": ", varname);
             ML_(pg_pp_varinfo)(di->admin_tyents, var->typeR, data_addr,
                                is_mem_defined_func, encoded_addrs);
             VG_(printf)("\n");
@@ -5706,8 +5705,7 @@ Bool VG_(pg_traverse_global_var)(const HChar* varname, Addr data_addr,
       if (data_address_is_in_var( &offset, di->admin_tyents, var,
                                   NULL/* RegSummary* */,
                                   data_addr, di )) {
-        VG_(printf)("  %s", varname);
-        VG_(printf)("    ");
+        VG_(printf)("  \"%s\": ", varname);
         ML_(pg_pp_varinfo)(di->admin_tyents, var->typeR, data_addr,
                            is_mem_defined_func, encoded_addrs);
         VG_(printf)("\n");
