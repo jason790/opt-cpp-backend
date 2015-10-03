@@ -409,7 +409,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
          }
 
-         VG_(printf)("\"addr\":\"%p\", \"kind\":\"base\", \"type\":\"%s\", \"size\":%d, \"val\":",
+         VG_(printf)("\"addr\":\"%p\", \"kind\":\"base\", \"type\":\"%s\", \"size\":%u, \"val\":",
                      (void*)data_addr,
                      ent->Te.TyBase.name,
                      ent->Te.TyBase.szB);
@@ -497,7 +497,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
          }
 
-         VG_(printf)("\"addr\":\"%p\", \"kind\":\"pointer\", \"size\":%d, \"val\":",
+         VG_(printf)("\"addr\":\"%p\", \"kind\":\"pointer\", \"size\":%u, \"val\":",
                      (void*)data_addr,
                      ent->Te.TyPorR.szB);
 
@@ -702,9 +702,6 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          break;
       case Te_TyArray:
          if (ent->Te.TyArray.boundRs) {
-            // an array with a known size, yay!
-            VG_(printf)("[array %p] ", (void*)data_addr);
-
             XArray* xa = ent->Te.TyArray.boundRs;
             // TODO: handle multi-dimensional arrays; right now we handle only 1-D
             // for simplicity
@@ -722,13 +719,21 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                 && bound_ent->Te.Bound.boundL == 0) {
               // yay, an array with known bounds!
 
+              VG_(printf)("\"addr\":\"%p\", \"kind\":\"array\", \"size\":%u, \"val\": [\n  ",
+                          (void*)data_addr,
+                          (unsigned int)(bound_ent->Te.Bound.boundU + 1));
+
               Addr cur_elt_addr = data_addr;
               for (Long i = 0; i <= bound_ent->Te.Bound.boundU /* inclusive */; i++) {
-                VG_(printf)("\n    ");
                 ML_(pg_pp_varinfo)(tyents, ent->Te.TyArray.typeR, cur_elt_addr,
                                    is_mem_defined_func, encoded_addrs);
+                if (i < bound_ent->Te.Bound.boundU) {
+                  VG_(printf)(",\n  ");
+                }
                 cur_elt_addr += element_size;
               }
+
+              VG_(printf)("\n]");
             }
             else if (bound_ent->Te.Bound.knownL && (!bound_ent->Te.Bound.knownU)
                 && bound_ent->Te.Bound.boundL == 0) {
