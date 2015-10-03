@@ -695,15 +695,22 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                                                     : "<anonymous>" );
          break;
       case Te_TyStOrUn:
-         VG_(printf)("%s %s",
-                     ent->Te.TyStOrUn.isStruct ? "struct" : "union",
-                     ent->Te.TyStOrUn.name ? ent->Te.TyStOrUn.name
-                                           : "<anonymous>" );
+         //VG_(printf)("%s %s",
+         //            ent->Te.TyStOrUn.isStruct ? "struct" : "union",
+         //            ent->Te.TyStOrUn.name ? ent->Te.TyStOrUn.name
+         //                                  : "<anonymous>" );
          // TODO: handle unions later, let's just focus on structs for now
          vg_assert(ent->Te.TyStOrUn.isStruct);
 
+         VG_(printf)("{\"addr\":\"%p\", \"kind\":\"struct\", \"type\":\"%s\", \"val\": {\n  ",
+                     (void*)data_addr,
+                     // TODO: patch later with typedef name if possible
+                     ent->Te.TyStOrUn.name ? ent->Te.TyStOrUn.name : "<anonymous>");
+
          // iterate into ent->Te.TyStOrUn.fieldRs to print all fields
          XArray* fieldRs = ent->Te.TyStOrUn.fieldRs;
+
+         Bool first_elt = True;
 
          // adapted from describe_type()
          for (int i = 0; i < VG_(sizeXA)( fieldRs ); i++) {
@@ -716,15 +723,23 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            // TODO: how should we handle nLoc >= 0?
            vg_assert(field->Te.Field.nLoc == -1);
 
-           Addr field_base_addr = data_addr + field->Te.Field.pos.offset;
-           VG_(printf)("\nFIELD %s offset: %d\n  ",
-                       field->Te.Field.name,
-                       (int)field->Te.Field.pos.offset);
+           if (first_elt) {
+             first_elt = False;
+           } else {
+             VG_(printf)(",\n  ");
+           }
 
-           // recurse!
+           Addr field_base_addr = data_addr + field->Te.Field.pos.offset;
+           //VG_(printf)("\nFIELD %s offset: %d\n  ",
+           //            field->Te.Field.name,
+           //            (int)field->Te.Field.pos.offset);
+
+           VG_(printf)("\"%s\":", field->Te.Field.name);
            ML_(pg_pp_varinfo)(tyents, field->Te.Field.typeR, field_base_addr,
                               is_mem_defined_func, encoded_addrs);
          }
+
+         VG_(printf)("}}");
 
          break;
       case Te_TyArray:
