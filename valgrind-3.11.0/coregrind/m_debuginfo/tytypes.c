@@ -492,23 +492,27 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
 
          break;
       case Te_TyPtr:
-         VG_(printf)("[ptr] ");
+         // record that this block has been rendered
+         if (!VG_(OSetWord_Contains)(encoded_addrs, (UWord)data_addr)) {
+           VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
+         }
+
+         VG_(printf)("\"addr\":\"%p\", \"kind\":\"pointer\", \"size\":%d, \"val\":",
+                     (void*)data_addr,
+                     ent->Te.TyPorR.szB);
 
          // check whether this memory has been allocated and/or initialized
          res = is_mem_defined_func(data_addr, ent->Te.TyPorR.szB,
                                    &bad_addr, &otag);
+
          if (res == 6 /* MC_AddrErr enum value */) {
-           VG_(printf)(" UNALLOC");
+           VG_(printf)("\"[UNALLOCATED]\"");
            return; // early!
          } else if (res == 7 /* MC_ValueErr enum value */) {
-           VG_(printf)(" UNINIT");
+           VG_(printf)("\"[UNINITIALIZED]\"");
            return; // early!
          } else {
            tl_assert(res == 5 /* MC_Ok enum value */);
-           // record that this block has been rendered
-           if (!VG_(OSetWord_Contains)(encoded_addrs, (UWord)data_addr)) {
-             VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
-           }
          }
 
          // ok so now we know data_addr is legit, so we can dereference
@@ -528,26 +532,26 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          //
          // if it's a pointer to the heap AND this heap object hasn't
          // yet been traversed (to be visualized), then we need to go in
-         // and traverse it so that we can visualize it. then we also
-         // need to print the pointer value so that the visualization
-         // knows to draw an arrow to there.
+         // and traverse it so that we can visualize it.
 
          AddrInfo ai;
          VG_(describe_addr)(ptr_val, &ai);
          if (ai.tag == Addr_Block) {
            // if this is a heap pointer ...
+           VG_(printf)("\"heap\"");
 
            TyEnt* element_ent = ML_(TyEnts__index_by_cuOff)(tyents, NULL, ent->Te.TyPorR.typeR);
            SizeT element_size = pg_get_elt_size(element_ent);
 
            Addr block_base_addr = ptr_val - ai.Addr.Block.rwoffset;
-           VG_(printf)("<heap ptr %p, sz: %d, base: %p, off: %d, eltsize: %d>",
-                       (void*)ptr_val,
-                       (int)ai.Addr.Block.block_szB /* total block size in bytes; doesn't mean
-                                                       all has been allocated by malloc, tho */,
-                       (void*)block_base_addr,
-                       (int)ai.Addr.Block.rwoffset /* offset in bytes */,
-                       (int)element_size);
+
+           //VG_(printf)("<heap ptr %p, sz: %d, base: %p, off: %d, eltsize: %d>",
+           //            (void*)ptr_val,
+           //            (int)ai.Addr.Block.block_szB /* total block size in bytes; doesn't mean
+           //                                            all has been allocated by malloc, tho */,
+           //            (void*)block_base_addr,
+           //            (int)ai.Addr.Block.rwoffset /* offset in bytes */,
+           //            (int)element_size);
 
            vg_assert(encoded_addrs);
 
@@ -581,20 +585,21 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                cur_addr += element_size;
              }
            } else {
-             VG_(printf)("heap pointer already encoded!\n");
+             //VG_(printf)("heap pointer already encoded!\n");
            }
          } else if (ai.tag == Addr_SegmentKind) {
+           VG_(printf)("\"global\""); // I *think* this is true, but not 100% sure
            // this is a pointer to some global client area, i think
            //
            // there aren't any redzones, so use heuristics to figure
            // out what to print out here. the most common is a string
            // literal like "hello world", so in that case, just end
            // at the null terminator.
-           VG_(printf)("<client segment ptr %p, tag: %d R:%d, W:%d, X:%d>", (void*)ptr_val,
-                       (int)ai.tag,
-                       (int)ai.Addr.SegmentKind.hasR,
-                       (int)ai.Addr.SegmentKind.hasW,
-                       (int)ai.Addr.SegmentKind.hasX);
+           //VG_(printf)("<client segment ptr %p, tag: %d R:%d, W:%d, X:%d>", (void*)ptr_val,
+           //            (int)ai.tag,
+           //            (int)ai.Addr.SegmentKind.hasR,
+           //            (int)ai.Addr.SegmentKind.hasW,
+           //            (int)ai.Addr.SegmentKind.hasX);
 
            // avoid rendering duplicates, to prevent redundancies and infinite loops
            if (!VG_(OSetWord_Contains)(encoded_addrs,
@@ -635,7 +640,8 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
              }
            }
          } else {
-           VG_(printf)("<other ptr %p, tag: %d>", (void*)ptr_val, (int)ai.tag);
+           VG_(printf)("\"stack/other\""); // I *think* this is true, but not 100% sure
+           //VG_(printf)("<other ptr %p, tag: %d>", (void*)ptr_val, (int)ai.tag);
          }
          break;
       case Te_TyRef:
@@ -746,6 +752,8 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          break;
       case Te_TyTyDef:
          // typedef -- directly recurse into the typeR field
+         // TODO: print out typedef name and data_addr so that we can
+         // postprocess to patch in the proper type names
          VG_(printf)("typedef %s\n", ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name : "<anonymous>" );
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyTyDef.typeR, data_addr,
                             is_mem_defined_func, encoded_addrs);
