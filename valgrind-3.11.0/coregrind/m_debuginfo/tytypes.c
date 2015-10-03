@@ -765,7 +765,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                           (void*)data_addr,
                           (unsigned int)(bound_ent->Te.Bound.boundU + 1));
 
-              Bool first_elt = True;
+              first_elt = True;
               Addr cur_elt_addr = data_addr;
               for (Long i = 0; i <= bound_ent->Te.Bound.boundU /* inclusive */; i++) {
                 if (first_elt) {
@@ -803,11 +803,15 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          break;
       case Te_TyTyDef:
          // typedef -- directly recurse into the typeR field
-         // TODO: print out typedef name and data_addr so that we can
-         // postprocess to patch in the proper type names
-         VG_(printf)("typedef %s\n", ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name : "<anonymous>" );
+         //VG_(printf)("typedef %s\n", ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name : "<anonymous>" );
+         VG_(printf)("{\"addr\":\"%p\", \"kind\":\"typedef\", \"type\":\"%s\", \"val\": {\n  ",
+                     (void*)data_addr,
+                     ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name : "<anonymous>");
+
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyTyDef.typeR, data_addr,
                             is_mem_defined_func, encoded_addrs);
+
+         VG_(printf)("}}");
          break;
       case Te_TyFn:
          vg_assert(0); // unhandled
