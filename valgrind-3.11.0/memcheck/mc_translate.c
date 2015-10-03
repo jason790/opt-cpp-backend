@@ -6317,6 +6317,8 @@ void pg_trace_inst(Addr a)
       Bool res = VG_(pg_traverse_global_var)(gb->fullname, gb->addr, is_mem_defined, pg_encoded_addrs);
       tl_assert(res);
     }
+
+    // TODO: print out an ordered list of globals since object keys have no order
     VG_(deleteXA)( gbs );
 
     for (UInt i = 0; i < stack_depth; i++) {
@@ -6357,6 +6359,8 @@ void pg_trace_inst(Addr a)
                                                 is_mem_defined, pg_encoded_addrs);
           tl_assert(res);
         }
+
+        // TODO: print out an ordered list of locals since object keys have no order
 
         VG_(deleteXA)(blocks);
       }
