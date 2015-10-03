@@ -4257,6 +4257,84 @@ UWord pg_get_di_handle_at_ip(Addr ip)
 }
 
 
+Bool VG_(pg_traverse_global_var)(Addr data_addr,
+                                 int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
+                                 OSet* encoded_heap_base_addrs) {
+  // adapted from VG_(get_data_description)
+
+  /* First, see if data_addr is (or is part of) a global variable.
+     Loop over the DebugInfos we have.  Check data_addr against the
+     outermost scope of all of them, as that should be a global
+     scope. */
+  for (DebugInfo* di = debugInfo_list; di != NULL; di = di->next) {
+    OSet*        global_scope;
+    Word         gs_size;
+    Addr         zero;
+    DiAddrRange* global_arange;
+    Word         i;
+    XArray*      vars;
+
+    /* text segment missing? unlikely, but handle it .. */
+    if (!di->text_present || di->text_size == 0)
+      continue;
+    /* any var info at all? */
+    if (!di->varinfo)
+      continue;
+    /* perhaps this object didn't contribute any vars at all? */
+    if (VG_(sizeXA)( di->varinfo ) == 0)
+      continue;
+    global_scope = *(OSet**)VG_(indexXA)( di->varinfo, 0 );
+    vg_assert(global_scope);
+    gs_size = VG_(OSetGen_Size)( global_scope );
+    /* The global scope might be completely empty if this
+       compilation unit declared locals but nothing global. */
+    if (gs_size == 0)
+      continue;
+    /* But if it isn't empty, then it must contain exactly one
+       element, which covers the entire address range. */
+    vg_assert(gs_size == 1);
+    /* Fish out the global scope and check it is as expected. */
+    zero = 0;
+    global_arange = VG_(OSetGen_Lookup)( global_scope, &zero );
+    /* The global range from (Addr)0 to ~(Addr)0 must exist */
+    vg_assert(global_arange);
+    vg_assert(global_arange->aMin == (Addr)0
+              && global_arange->aMax == ~(Addr)0);
+    /* Any vars in this range? */
+    if (!global_arange->vars)
+      continue;
+    /* Ok, there are some vars in the global scope of this
+       DebugInfo.  Wade through them and see if the data addresses
+       of any of them bracket data_addr. */
+    vars = global_arange->vars;
+    for (i = 0; i < VG_(sizeXA)( vars ); i++) {
+      PtrdiffT offset;
+      DiVariable* var = (DiVariable*)VG_(indexXA)( vars, i );
+      vg_assert(var->name);
+      /* Note we use a NULL RegSummary* here.  It can't make any
+         sense for a global variable to have a location expression
+         which depends on a SP/FP/IP value.  So don't supply any.
+         This means, if the evaluation of the location
+         expression/list requires a register, we have to let it
+         fail. */
+      if (data_address_is_in_var( &offset, di->admin_tyents, var,
+                                  NULL/* RegSummary* */,
+                                  data_addr, di )) {
+        // go inside!
+        VG_(printf)("    ");
+        ML_(pg_pp_varinfo)(di->admin_tyents, var->typeR, data_addr,
+                           is_mem_defined_func, encoded_heap_base_addrs);
+        VG_(printf)("\n");
+
+        return True;
+      }
+    }
+  }
+
+  return True;
+}
+
+
 /* Get an array of GlobalBlock which describe the global blocks owned
    by the shared object characterised by the given di_handle.  Asserts
    if the handle is invalid.  The caller is responsible for freeing
@@ -4380,6 +4458,8 @@ VG_(di_get_global_blocks_from_dihandle) ( ULong di_handle, Bool  arrays_only )
             VG_(strncpy)(&gb.soname[0], di->soname, sizeof(gb.soname)-1);
             vg_assert(gb.name[ sizeof(gb.name)-1 ] == 0);
             vg_assert(gb.soname[ sizeof(gb.soname)-1 ] == 0);
+
+            gb.fullname = var->name; // pgbovine (since name truncates to N bytes)
 
             VG_(addToXA)( gvars, &gb );
 

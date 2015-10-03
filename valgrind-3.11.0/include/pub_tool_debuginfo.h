@@ -121,6 +121,10 @@ Bool VG_(get_data_description)(
      );
 
 // pgbovine
+Bool VG_(pg_traverse_global_var)(Addr data_addr,
+                                 int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
+                                 OSet* encoded_heap_base_addrs);
+
 Bool VG_(pg_traverse_local_var) (Addr data_addr,
                                  Addr ip, Addr sp, Addr fp,
                                  int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
@@ -205,6 +209,7 @@ typedef
       Bool  isVec;      /* does block have an array type, or not? */
       HChar name[16];   /* first 15 chars of name (asciiz) */
       HChar soname[16]; /* first 15 chars of name (asciiz) */
+      const HChar* fullname; // pgbovine - full variable name
    }
    GlobalBlock;
 

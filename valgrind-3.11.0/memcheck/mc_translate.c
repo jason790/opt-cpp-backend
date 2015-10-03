@@ -6308,20 +6308,15 @@ void pg_trace_inst(Addr a)
 
     XArray* /* of GlobalBlock */ gbs = VG_(di_get_global_blocks_from_dihandle)(di_handle, False);
     Word n = VG_(sizeXA)( gbs );
-    VG_(printf)("   GOT %ld globals\n", n);
+    VG_(printf)("GOT %ld globals\n", n);
     for (Word i = 0; i < n; i++) {
       GlobalBlock* gb = VG_(indexXA)( gbs, i );
-      VG_(printf)("   new Global size %2lu at %#lx: soname: %s, name: %s, isVec: %d\n",
-                  gb->szB, gb->addr, gb->soname, gb->name, (int)gb->isVec);
+      VG_(printf)("  GLOBAL size %2lu at %#lx: fullname: %s, isVec: %d\n",
+                  gb->szB, gb->addr,
+                  gb->fullname, (int)gb->isVec);
       tl_assert(gb->szB > 0);
 
-
-      // TODO: see VG_(di_get_global_blocks_from_dihandle) ( ULong di_handle, Bool  arrays_only )
-      // for how to grab the var out, which has its own var->typeR
-
-      // TODO: do a traverse of gb->addr
-      //VG_(pg_traverse_local_var)(gb->addr, top_ip, top_sp, top_fp,
-      //                           is_mem_defined, pg_encoded_heap_base_addrs);
+      VG_(pg_traverse_global_var)(gb->addr, is_mem_defined, pg_encoded_heap_base_addrs);
     }
     VG_(deleteXA)( gbs );
 
