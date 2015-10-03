@@ -519,6 +519,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          // ok so now we know data_addr is legit, so we can dereference
          // it to get its value
          Addr ptr_val = *((Addr*)data_addr);
+         VG_(printf)("\"%p\"", (void*)ptr_val);
 
          // what do we do now? ptr_val is either a pointer:
          // - that's invalid (e.g., null, garbage)
@@ -539,7 +540,6 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          VG_(describe_addr)(ptr_val, &ai);
          if (ai.tag == Addr_Block) {
            // if this is a heap pointer ...
-           VG_(printf)("\"heap\"");
 
            TyEnt* element_ent = ML_(TyEnts__index_by_cuOff)(tyents, NULL, ent->Te.TyPorR.typeR);
            SizeT element_size = pg_get_elt_size(element_ent);
@@ -598,8 +598,6 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
 
            VG_(printf)("}");
          } else if (ai.tag == Addr_SegmentKind) {
-           VG_(printf)("\"global\""); // I *think* this is true, but not 100% sure
-
            // this is a pointer to some global client area, i think
            //
            // there aren't any redzones, so use heuristics to figure
@@ -669,7 +667,6 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
 
            VG_(printf)("}");
          } else {
-           VG_(printf)("\"stack/other\""); // I *think* this is true, but not 100% sure
            VG_(printf)("}");
            //VG_(printf)("<other ptr %p, tag: %d>", (void*)ptr_val, (int)ai.tag);
          }
