@@ -404,28 +404,28 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
       case Te_TyBase:
          if (!ent->Te.TyBase.name) goto unhandled;
 
+         // record that this block has been rendered
+         if (!VG_(OSetWord_Contains)(encoded_addrs, (UWord)data_addr)) {
+           VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
+         }
+
+         VG_(printf)("\"addr\":\"%p\", \"kind\":\"base\", \"type\":\"%s\", \"size\":%d, \"val\":",
+                     (void*)data_addr,
+                     ent->Te.TyBase.name,
+                     ent->Te.TyBase.szB);
+
          // check whether this memory has been allocated and/or initialized
          res = is_mem_defined_func(data_addr, ent->Te.TyBase.szB,
                                        &bad_addr, &otag);
          if (res == 6 /* MC_AddrErr enum value */) {
-           VG_(printf)("  UNALLOC");
+           VG_(printf)("\"[UNALLOCATED]\"");
            return; // early!
          } else if (res == 7 /* MC_ValueErr enum value */) {
-           VG_(printf)("  UNINIT");
+           VG_(printf)("\"[UNINITIALIZED]\"");
            return; // early!
          } else {
            tl_assert(res == 5 /* MC_Ok enum value */);
-           // record that this block has been rendered
-           if (!VG_(OSetWord_Contains)(encoded_addrs, (UWord)data_addr)) {
-             VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
-           }
          }
-
-         // attempt to print out the value
-         VG_(printf)("[base] %s(%d%c)",
-                     ent->Te.TyBase.name,
-                     ent->Te.TyBase.szB,
-                     ent->Te.TyBase.enc);
 
          if (ent->Te.TyBase.enc == 'S') {
            if (ent->Te.TyBase.szB == sizeof(char)) {
@@ -443,29 +443,28 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
              }
              JsonNode* node = json_mkstring(str);
              char* encoded = json_encode(node);
-             VG_(printf)("  val_json=%s", encoded);
+             VG_(printf)("%s", encoded);
              VG_(free)(encoded);
              json_delete(node);
            } else if (ent->Te.TyBase.szB == sizeof(short)) {
-             VG_(printf)(" val=%d", *((short*)data_addr));
+             VG_(printf)("%d", *((short*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(int)) {
-             VG_(printf)(" val=%d", *((int*)data_addr));
+             VG_(printf)("%d", *((int*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(long int)) {
-             VG_(printf)(" val=%ld", *((long int*)data_addr));
+             VG_(printf)("%ld", *((long int*)data_addr));
            } else {
              // what other stuff is here?!?
              vg_assert(0);
            }
          } else if (ent->Te.TyBase.enc == 'U') {
            if (ent->Te.TyBase.szB == sizeof(unsigned char)) {
-             // TODO: print as number or character?
-             VG_(printf)(" val=%u", *((unsigned char*)data_addr));
+             VG_(printf)("%u", *((unsigned char*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(unsigned short)) {
-             VG_(printf)(" val=%u", *((unsigned short*)data_addr));
+             VG_(printf)("%u", *((unsigned short*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(unsigned int)) {
-             VG_(printf)(" val=%u", *((unsigned int*)data_addr));
+             VG_(printf)("%u", *((unsigned int*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(unsigned long int)) {
-             VG_(printf)(" val=%lu", *((unsigned long int*)data_addr));
+             VG_(printf)("%lu", *((unsigned long int*)data_addr));
            } else {
              // what other stuff is here?!?
              vg_assert(0);
@@ -473,13 +472,13 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          } else if (ent->Te.TyBase.enc == 'F') {
            // careful about subtleties around floats and doubles and stuff ..
            if (ent->Te.TyBase.szB == sizeof(float)) {
-             VG_(printf)(" val=%f", *((float*)data_addr));
+             VG_(printf)("%f", *((float*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(double)) {
-             VG_(printf)(" val=%f", *((double*)data_addr));
+             VG_(printf)("%f", *((double*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(long double)) {
              // TODO: doesn't currently work for some reason :(
              // long doubles are shown as uninit
-             VG_(printf)(" val=%Lf", *((long double*)data_addr));
+             VG_(printf)("%Lf", *((long double*)data_addr));
            } else {
              // what other stuff is here?!?
              vg_assert(0);
