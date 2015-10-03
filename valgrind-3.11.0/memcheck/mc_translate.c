@@ -6275,16 +6275,25 @@ void pg_trace_inst(Addr a)
                                             "pg_encoded_addrs",
                                             VG_(free));
 
+    VG_(printf)("=== pg_trace_inst ===\n");
+    VG_(printf)("{\n");
+
     Vg_FnNameKind kind = VG_(get_fnname_kind_from_IP)(a);
     const HChar *fn;
     Bool hasfn = VG_(get_fnname)(a, &fn);
     UInt linenum;
     Bool haslinenum = VG_(get_linenum)(a, &linenum);
-    VG_(printf)("pg_trace_inst %p %s %s (%u) - Kind: %d\n",
-                (void*)a,
-                hasfile ? file : "???",
+    //VG_(printf)("pg_trace_inst %p %s %s (%u) - Kind: %d\n",
+    //            (void*)a,
+    //            hasfile ? file : "???",
+    //            hasfn ? fn : "???",
+    //            haslinenum ? linenum : -999,
+    //            (int)kind);
+
+    VG_(printf)("\"func_name\": \"%s\", \"line\": %d, \"IP\": \"%p\", \"kind\": %d, ",
                 hasfn ? fn : "???",
-                haslinenum ? linenum : -1,
+                haslinenum ? linenum : -999,
+                (void*)a,
                 (int)kind);
 
     Addr ips[100];
@@ -6312,9 +6321,6 @@ void pg_trace_inst(Addr a)
     VG_(printf)("\n\"globals\": {");
     for (i = 0; i < n; i++) {
       GlobalBlock* gb = VG_(indexXA)( gbs, i );
-      //VG_(printf)("  GLOBAL size %2lu at %#lx: fullname: %s, isVec: %d\n",
-      //            gb->szB, gb->addr,
-      //            gb->fullname, (int)gb->isVec);
       tl_assert(gb->szB > 0);
 
       if (first_elt) {
@@ -6333,9 +6339,6 @@ void pg_trace_inst(Addr a)
     first_elt = True;
     for (i = 0; i < n; i++) {
       GlobalBlock* gb = VG_(indexXA)( gbs, i );
-      //VG_(printf)("  GLOBAL size %2lu at %#lx: fullname: %s, isVec: %d\n",
-      //            gb->szB, gb->addr,
-      //            gb->fullname, (int)gb->isVec);
       tl_assert(gb->szB > 0);
 
       if (first_elt) {
@@ -6365,27 +6368,17 @@ void pg_trace_inst(Addr a)
       if (first_stack_entry) {
         first_stack_entry = False;
       } else {
-        VG_(printf)(",");
+        VG_(printf)(",\n");
       }
 
       VG_(printf)("{");
 
-      //const HChar *cur_file;
-      //Bool cur_hasfile = VG_(get_filename)(cur_ip, &cur_file);
       const HChar *cur_fn;
       Bool cur_hasfn = VG_(get_fnname)(cur_ip, &cur_fn);
       UInt cur_linenum;
       Bool cur_haslinenum = VG_(get_linenum)(cur_ip, &cur_linenum);
 
-      //VG_(printf)("%u - Kind: %d, IP: %p, %s:%s(%d), SP: %p, FP: %p\n",
-      //            i, ip_kind,
-      //            (void*)cur_ip,
-      //            cur_hasfile ? cur_file : "???",
-      //            cur_hasfn ? cur_fn : "???",
-      //            cur_haslinenum ? cur_linenum : -999,
-      //            (void*)cur_sp, (void*)cur_fp);
-
-      VG_(printf)("\"func_name\":\"%s\", \"line\": %u, \"SP\": \"%p\",  \"FP\": \"%p\", ",
+      VG_(printf)("\"func_name\":\"%s\", \"line\": %d, \"SP\": \"%p\",  \"FP\": \"%p\", ",
                   cur_hasfn ? cur_fn : "???",
                   cur_haslinenum ? cur_linenum : -999,
                   (void*)cur_sp, (void*)cur_fp);
@@ -6441,6 +6434,8 @@ void pg_trace_inst(Addr a)
     // the same blocks at the next step
     VG_(OSetWord_Destroy)(pg_encoded_addrs);
     pg_encoded_addrs = NULL;
+
+    VG_(printf)("}\n");
   }
 }
 
