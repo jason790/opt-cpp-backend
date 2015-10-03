@@ -409,7 +409,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
          }
 
-         VG_(printf)("\"addr\":\"%p\", \"kind\":\"base\", \"type\":\"%s\", \"size\":%u, \"val\":",
+         VG_(printf)("{\"addr\":\"%p\", \"kind\":\"base\", \"type\":\"%s\", \"size\":%u, \"val\":",
                      (void*)data_addr,
                      ent->Te.TyBase.name,
                      ent->Te.TyBase.szB);
@@ -418,10 +418,10 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          res = is_mem_defined_func(data_addr, ent->Te.TyBase.szB,
                                        &bad_addr, &otag);
          if (res == 6 /* MC_AddrErr enum value */) {
-           VG_(printf)("\"[UNALLOCATED]\"");
+           VG_(printf)("\"<UNALLOCATED>\"}");
            return; // early!
          } else if (res == 7 /* MC_ValueErr enum value */) {
-           VG_(printf)("\"[UNINITIALIZED]\"");
+           VG_(printf)("\"<UNINITIALIZED>\"}");
            return; // early!
          } else {
            tl_assert(res == 5 /* MC_Ok enum value */);
@@ -490,6 +490,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            vg_assert(0); // are there any cases left?
          }
 
+         VG_(printf)("}");
          break;
       case Te_TyPtr:
          // record that this block has been rendered
@@ -497,7 +498,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
          }
 
-         VG_(printf)("\"addr\":\"%p\", \"kind\":\"pointer\", \"size\":%u, \"val\":",
+         VG_(printf)("{\"addr\":\"%p\", \"kind\":\"pointer\", \"size\":%u, \"val\":",
                      (void*)data_addr,
                      ent->Te.TyPorR.szB);
 
@@ -506,10 +507,10 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                                    &bad_addr, &otag);
 
          if (res == 6 /* MC_AddrErr enum value */) {
-           VG_(printf)("\"[UNALLOCATED]\"");
+           VG_(printf)("\"<UNALLOCATED>\"}");
            return; // early!
          } else if (res == 7 /* MC_ValueErr enum value */) {
-           VG_(printf)("\"[UNINITIALIZED]\"");
+           VG_(printf)("\"<UNINITIALIZED>\"}");
            return; // early!
          } else {
            tl_assert(res == 5 /* MC_Ok enum value */);
@@ -539,6 +540,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          if (ai.tag == Addr_Block) {
            // if this is a heap pointer ...
            VG_(printf)("\"heap\"");
+           VG_(printf)("}");
 
            TyEnt* element_ent = ML_(TyEnts__index_by_cuOff)(tyents, NULL, ent->Te.TyPorR.typeR);
            SizeT element_size = pg_get_elt_size(element_ent);
@@ -589,6 +591,8 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            }
          } else if (ai.tag == Addr_SegmentKind) {
            VG_(printf)("\"global\""); // I *think* this is true, but not 100% sure
+           VG_(printf)("}");
+
            // this is a pointer to some global client area, i think
            //
            // there aren't any redzones, so use heuristics to figure
@@ -641,6 +645,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            }
          } else {
            VG_(printf)("\"stack/other\""); // I *think* this is true, but not 100% sure
+           VG_(printf)("}");
            //VG_(printf)("<other ptr %p, tag: %d>", (void*)ptr_val, (int)ai.tag);
          }
          break;
@@ -719,7 +724,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                 && bound_ent->Te.Bound.boundL == 0) {
               // yay, an array with known bounds!
 
-              VG_(printf)("\"addr\":\"%p\", \"kind\":\"array\", \"size\":%u, \"val\": [\n  ",
+              VG_(printf)("{\"addr\":\"%p\", \"kind\":\"array\", \"size\":%u, \"val\": [\n  ",
                           (void*)data_addr,
                           (unsigned int)(bound_ent->Te.Bound.boundU + 1));
 
@@ -733,7 +738,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                 cur_elt_addr += element_size;
               }
 
-              VG_(printf)("\n]");
+              VG_(printf)("\n]}");
             }
             else if (bound_ent->Te.Bound.knownL && (!bound_ent->Te.Bound.knownU)
                 && bound_ent->Te.Bound.boundL == 0) {
