@@ -6309,12 +6309,13 @@ void pg_trace_inst(Addr a)
     VG_(printf)("GOT %ld globals\n", n);
     for (Word i = 0; i < n; i++) {
       GlobalBlock* gb = VG_(indexXA)( gbs, i );
-      VG_(printf)("  GLOBAL size %2lu at %#lx: fullname: %s, isVec: %d\n",
-                  gb->szB, gb->addr,
-                  gb->fullname, (int)gb->isVec);
+      //VG_(printf)("  GLOBAL size %2lu at %#lx: fullname: %s, isVec: %d\n",
+      //            gb->szB, gb->addr,
+      //            gb->fullname, (int)gb->isVec);
       tl_assert(gb->szB > 0);
 
-      VG_(pg_traverse_global_var)(gb->addr, is_mem_defined, pg_encoded_addrs);
+      Bool res = VG_(pg_traverse_global_var)(gb->fullname, gb->addr, is_mem_defined, pg_encoded_addrs);
+      tl_assert(res);
     }
     VG_(deleteXA)( gbs );
 
@@ -6352,10 +6353,9 @@ void pg_trace_inst(Addr a)
           //VG_(printf)("  sb %d: %s | base: %d, szB: %d, spRel: %d, isVec: %d | %p\n", j, sb->name,
           //            sb->base, sb->szB, sb->spRel, sb->isVec,
           //            (void*)var_addr);
-
-          VG_(printf)("  %s", sb->fullname);
-          VG_(pg_traverse_local_var)(var_addr, cur_ip, cur_sp, cur_fp,
-                                     is_mem_defined, pg_encoded_addrs);
+          Bool res = VG_(pg_traverse_local_var)(sb->fullname, var_addr, cur_ip, cur_sp, cur_fp,
+                                                is_mem_defined, pg_encoded_addrs);
+          tl_assert(res);
         }
 
         VG_(deleteXA)(blocks);

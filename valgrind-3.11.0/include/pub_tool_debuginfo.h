@@ -121,11 +121,11 @@ Bool VG_(get_data_description)(
      );
 
 // pgbovine
-Bool VG_(pg_traverse_global_var)(Addr data_addr,
+Bool VG_(pg_traverse_global_var)(const HChar* varname, Addr data_addr,
                                  int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
                                  OSet* encoded_addrs);
 
-Bool VG_(pg_traverse_local_var) (Addr data_addr,
+Bool VG_(pg_traverse_local_var) (const HChar* varname, Addr data_addr,
                                  Addr ip, Addr sp, Addr fp,
                                  int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
                                  OSet* encoded_addrs);

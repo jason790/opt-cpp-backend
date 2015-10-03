@@ -3654,7 +3654,7 @@ Bool consider_vars_in_frame ( /*MOD*/XArray* /* of HChar */ dname1,
 
 
 // pgbovine - copied and pasted from consider_vars_in_frame above
-Bool VG_(pg_traverse_local_var) (Addr data_addr,
+Bool VG_(pg_traverse_local_var) (const HChar* varname, Addr data_addr,
                                  Addr ip, Addr sp, Addr fp,
                                  int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
                                  OSet* encoded_addrs)
@@ -3758,6 +3758,7 @@ Bool VG_(pg_traverse_local_var) (Addr data_addr,
                                      var, &regs,
                                      data_addr, di )) {
             // pgbovine
+            VG_(printf)("  %s", varname);
             VG_(printf)("    ");
             ML_(pg_pp_varinfo)(di->admin_tyents, var->typeR, data_addr,
                                is_mem_defined_func, encoded_addrs);
@@ -4255,7 +4256,7 @@ UWord pg_get_di_handle_at_ip(Addr ip)
 }
 
 
-Bool VG_(pg_traverse_global_var)(Addr data_addr,
+Bool VG_(pg_traverse_global_var)(const HChar* varname, Addr data_addr,
                                  int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
                                  OSet* encoded_addrs) {
   // adapted from VG_(get_data_description)
@@ -4318,7 +4319,7 @@ Bool VG_(pg_traverse_global_var)(Addr data_addr,
       if (data_address_is_in_var( &offset, di->admin_tyents, var,
                                   NULL/* RegSummary* */,
                                   data_addr, di )) {
-        // go inside!
+        VG_(printf)("  %s", varname);
         VG_(printf)("    ");
         ML_(pg_pp_varinfo)(di->admin_tyents, var->typeR, data_addr,
                            is_mem_defined_func, encoded_addrs);
