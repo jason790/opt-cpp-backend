@@ -572,7 +572,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
              // TODO: any risk of overrun into other blocks? hopefully
              // not, due to redzones
              Addr cur_addr = block_base_addr;
-             Bool first = True;
+             Bool first_elt = True;
              while (1) {
                res = is_mem_defined_func(cur_addr, element_size,
                                          &bad_addr, &otag);
@@ -581,8 +581,8 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                  break; // break on first unallocated byte since that marks the end of the block (hopefully!)
                }
 
-               if (first) {
-                 first = False;
+               if (first_elt) {
+                 first_elt = False;
                } else {
                  VG_(printf)(",\n  ");
                }
@@ -621,22 +621,34 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
              SizeT element_size = pg_get_elt_size(element_ent);
 
              // only try to print out string literals like "hello world"
+             // since there's a clear null-terminator boundary. other
+             // values don't have clear boundaries, so we can't just
+             // probe ahead to find the end (because globals don't have
+             // redzones, i don't think)
              if (element_ent->tag == Te_TyBase &&
                  element_ent->Te.TyBase.enc == 'S' &&
                  element_ent->Te.TyBase.szB == sizeof(char)) {
+
+               VG_(printf)(", \"deref_val\":\n");
+
+               VG_(printf)("{\"addr\":\"%p\", \"kind\":\"global_string\", \"val\": [\n  ",
+                           (void*)ptr_val);
+
                Addr cur_addr = ptr_val;
+               Bool first_elt = True;
                while (1) {
                  res = is_mem_defined_func(cur_addr, element_size,
                                            &bad_addr, &otag);
                  if (res == 6 /* MC_AddrErr enum value */) {
-                   VG_(printf)("\n  UNALLOC");
+                   //VG_(printf)("\n  UNALLOC");
                    break; // break on first unallocated byte
-                 } else if (res == 7 /* MC_ValueErr enum value */) {
-                   VG_(printf)("\n  UNINIT");
                  } else {
-                   tl_assert(res == 5 /* MC_Ok enum value */);
-                   VG_(printf)("\n  elt: ");
-                   // recurse!
+                   if (first_elt) {
+                     first_elt = False;
+                   } else {
+                     VG_(printf)(",\n  ");
+                   }
+
                    ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
                                       is_mem_defined_func, encoded_addrs);
 
@@ -648,6 +660,10 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                  }
                  cur_addr += element_size;
                }
+
+               VG_(printf)("]}");
+             } else {
+               // don't do anything!
              }
            }
 
