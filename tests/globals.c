@@ -1,7 +1,7 @@
 // adapted from pg's meng thesis
 
 int globalInt = 42;
-char* globalStr = "hello world again!";
+char* globalStr = "hello\nworld\tagain!\n\n\n";
 char globalChar = 'x';
 double globalDouble = 3.14159;
 int globalIntArray[7];

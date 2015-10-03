@@ -429,13 +429,23 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
 
          if (ent->Te.TyBase.enc == 'S') {
            if (ent->Te.TyBase.szB == sizeof(char)) {
+             // print as a JSON string to properly handle special characters
              char val = *((char*)data_addr);
-             // special-case printing
+             char str[3];
+             // special-case for rendering the '\0' null terminator
              if (val == '\0') {
-               VG_(printf)(" val=\\0");
+               str[0] = '\\';
+               str[1] = '0';
+               str[2] = '\0';
              } else {
-               VG_(printf)(" val=%c", val);
+               str[0] = val;
+               str[1] = '\0';
              }
+             JsonNode* node = json_mkstring(str);
+             char* encoded = json_encode(node);
+             VG_(printf)("  val_json=%s", encoded);
+             VG_(free)(encoded);
+             json_delete(node);
            } else if (ent->Te.TyBase.szB == sizeof(short)) {
              VG_(printf)(" val=%d", *((short*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(int)) {
