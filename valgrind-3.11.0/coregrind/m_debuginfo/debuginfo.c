@@ -3758,10 +3758,6 @@ Bool VG_(pg_traverse_local_var) (Addr data_addr,
                                      var, &regs,
                                      data_addr, di )) {
             // pgbovine
-            //TyEnt* ty = ML_(TyEnts__index_by_cuOff)(di->admin_tyents, NULL, var->typeR);
-            //VG_(printf)("    ");
-            //ML_(pp_TyEnt)(ty);
-            //VG_(printf)("\n");
             VG_(printf)("    ");
             ML_(pg_pp_varinfo)(di->admin_tyents, var->typeR, data_addr,
                                is_mem_defined_func, encoded_addrs);
@@ -4066,6 +4062,7 @@ void analyse_deps ( /*MOD*/XArray* /* of FrameBlock */ blocks,
          if (var->name)
             VG_(strncpy)( &block.name[0], var->name, sizeof(block.name)-1 );
          block.name[ sizeof(block.name)-1 ] = 0;
+         block.fullname = var->name; // pgbovine (since name truncates to N bytes)
          VG_(addToXA)( blocks, &block );
       }
       else
@@ -4085,6 +4082,7 @@ void analyse_deps ( /*MOD*/XArray* /* of FrameBlock */ blocks,
          if (var->name)
             VG_(strncpy)( &block.name[0], var->name, sizeof(block.name)-1 );
          block.name[ sizeof(block.name)-1 ] = 0;
+         block.fullname = var->name; // pgbovine (since name truncates to N bytes)
          VG_(addToXA)( blocks, &block );
       }
       else {
@@ -4331,7 +4329,7 @@ Bool VG_(pg_traverse_global_var)(Addr data_addr,
     }
   }
 
-  return True;
+  return False;
 }
 
 

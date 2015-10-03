@@ -6299,8 +6299,6 @@ void pg_trace_inst(Addr a)
     tl_assert(stack_depth > 0);
 
     Addr top_ip = ips[0];
-    //Addr top_sp = sps[0];
-    //Addr top_fp = fps[0];
 
     // traverse globals
     // adapted from exp-sgcheck/sg_main.c acquire_globals()
@@ -6355,8 +6353,7 @@ void pg_trace_inst(Addr a)
           //            sb->base, sb->szB, sb->spRel, sb->isVec,
           //            (void*)var_addr);
 
-          //MC_(pp_describe_addr) (var_addr);
-          VG_(printf)("  %s", sb->name);
+          VG_(printf)("  %s", sb->fullname);
           VG_(pg_traverse_local_var)(var_addr, cur_ip, cur_sp, cur_fp,
                                      is_mem_defined, pg_encoded_addrs);
         }

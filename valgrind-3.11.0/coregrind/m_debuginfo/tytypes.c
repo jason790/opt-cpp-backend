@@ -707,8 +707,6 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                 && bound_ent->Te.Bound.boundL == 0) {
               // yay, an array with known bounds!
 
-              //VG_(printf)("[%lld]", 1 + bound_ent->Te.Bound.boundU);
-
               Addr cur_elt_addr = data_addr;
               for (Long i = 0; i <= bound_ent->Te.Bound.boundU /* inclusive */; i++) {
                 VG_(printf)("\n    ");

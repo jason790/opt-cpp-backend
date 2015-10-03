@@ -187,6 +187,7 @@ typedef
       Bool     spRel;      /* True => sp-rel, False => fp-rel */
       Bool     isVec;      /* does block have an array type, or not? */
       HChar    name[16];   /* first 15 chars of name (asciiz) */
+      const HChar* fullname; // pgbovine - full variable name
    }
    StackBlock;
 
