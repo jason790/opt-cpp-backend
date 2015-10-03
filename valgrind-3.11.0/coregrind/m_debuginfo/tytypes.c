@@ -765,13 +765,17 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                           (void*)data_addr,
                           (unsigned int)(bound_ent->Te.Bound.boundU + 1));
 
+              Bool first_elt = True;
               Addr cur_elt_addr = data_addr;
               for (Long i = 0; i <= bound_ent->Te.Bound.boundU /* inclusive */; i++) {
-                ML_(pg_pp_varinfo)(tyents, ent->Te.TyArray.typeR, cur_elt_addr,
-                                   is_mem_defined_func, encoded_addrs);
-                if (i < bound_ent->Te.Bound.boundU) {
+                if (first_elt) {
+                  first_elt = False;
+                } else {
                   VG_(printf)(",\n  ");
                 }
+
+                ML_(pg_pp_varinfo)(tyents, ent->Te.TyArray.typeR, cur_elt_addr,
+                                   is_mem_defined_func, encoded_addrs);
                 cur_elt_addr += element_size;
               }
 
