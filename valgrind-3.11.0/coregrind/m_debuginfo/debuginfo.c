@@ -3657,7 +3657,7 @@ Bool consider_vars_in_frame ( /*MOD*/XArray* /* of HChar */ dname1,
 Bool VG_(pg_traverse_local_var) (Addr data_addr,
                                  Addr ip, Addr sp, Addr fp,
                                  int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
-                                 OSet* encoded_heap_base_addrs)
+                                 OSet* encoded_addrs)
 {
    Word       i;
    DebugInfo* di;
@@ -3764,7 +3764,7 @@ Bool VG_(pg_traverse_local_var) (Addr data_addr,
             //VG_(printf)("\n");
             VG_(printf)("    ");
             ML_(pg_pp_varinfo)(di->admin_tyents, var->typeR, data_addr,
-                               is_mem_defined_func, encoded_heap_base_addrs);
+                               is_mem_defined_func, encoded_addrs);
             VG_(printf)("\n");
 
             return True;
@@ -4259,7 +4259,7 @@ UWord pg_get_di_handle_at_ip(Addr ip)
 
 Bool VG_(pg_traverse_global_var)(Addr data_addr,
                                  int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
-                                 OSet* encoded_heap_base_addrs) {
+                                 OSet* encoded_addrs) {
   // adapted from VG_(get_data_description)
 
   /* First, see if data_addr is (or is part of) a global variable.
@@ -4323,7 +4323,7 @@ Bool VG_(pg_traverse_global_var)(Addr data_addr,
         // go inside!
         VG_(printf)("    ");
         ML_(pg_pp_varinfo)(di->admin_tyents, var->typeR, data_addr,
-                           is_mem_defined_func, encoded_heap_base_addrs);
+                           is_mem_defined_func, encoded_addrs);
         VG_(printf)("\n");
 
         return True;

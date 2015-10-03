@@ -6256,9 +6256,9 @@ static Bool checkForBogusLiterals ( /*FLAT*/ IRStmt* st )
 // pgbovine
 VG_REGPARM(1) void pg_trace_inst(Addr ad);
 
-// heap base block addresses that have already been encoded FOR THIS
-// STEP! remember to reset between steps
-OSet* pg_encoded_heap_base_addrs = NULL;
+// any addresses whose values have already been encoded FOR THIS STEP!
+// (remember to reset between steps)
+OSet* pg_encoded_addrs = NULL;
 
 VG_REGPARM(1)
 void pg_trace_inst(Addr a)
@@ -6270,10 +6270,10 @@ void pg_trace_inst(Addr a)
   // only trace instructions in pg_source_filename, which was
   // initialized with the --source-filename option
   if (hasfile && VG_STREQ(file, pg_source_filename)) {
-    tl_assert(!pg_encoded_heap_base_addrs); // should have been reset
-    pg_encoded_heap_base_addrs = VG_(OSetWord_Create)(VG_(malloc),
-                                                      "pg_encoded_heap_base_addrs",
-                                                      VG_(free));
+    tl_assert(!pg_encoded_addrs); // should have been reset
+    pg_encoded_addrs = VG_(OSetWord_Create)(VG_(malloc),
+                                            "pg_encoded_addrs",
+                                            VG_(free));
 
     Vg_FnNameKind kind = VG_(get_fnname_kind_from_IP)(a);
     const HChar *fn;
@@ -6316,7 +6316,7 @@ void pg_trace_inst(Addr a)
                   gb->fullname, (int)gb->isVec);
       tl_assert(gb->szB > 0);
 
-      VG_(pg_traverse_global_var)(gb->addr, is_mem_defined, pg_encoded_heap_base_addrs);
+      VG_(pg_traverse_global_var)(gb->addr, is_mem_defined, pg_encoded_addrs);
     }
     VG_(deleteXA)( gbs );
 
@@ -6358,7 +6358,7 @@ void pg_trace_inst(Addr a)
           //MC_(pp_describe_addr) (var_addr);
           VG_(printf)("  %s", sb->name);
           VG_(pg_traverse_local_var)(var_addr, cur_ip, cur_sp, cur_fp,
-                                     is_mem_defined, pg_encoded_heap_base_addrs);
+                                     is_mem_defined, pg_encoded_addrs);
         }
 
         VG_(deleteXA)(blocks);
@@ -6369,8 +6369,8 @@ void pg_trace_inst(Addr a)
 
     // reset this after every execution step so that we can re-encode
     // the same blocks at the next step
-    VG_(OSetWord_Destroy)(pg_encoded_heap_base_addrs);
-    pg_encoded_heap_base_addrs = NULL;
+    VG_(OSetWord_Destroy)(pg_encoded_addrs);
+    pg_encoded_addrs = NULL;
   }
 }
 

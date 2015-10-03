@@ -388,7 +388,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                          UWord cuOff,
                          Addr data_addr,
                          int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
-                         OSet* encoded_heap_base_addrs)
+                         OSet* encoded_addrs)
 {
    TyEnt* ent = ML_(TyEnts__index_by_cuOff)( tyents, NULL, cuOff );
    if (!ent) {
@@ -415,6 +415,10 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            return; // early!
          } else {
            tl_assert(res == 5 /* MC_Ok enum value */);
+           // record that this block has been rendered
+           if (!VG_(OSetWord_Contains)(encoded_addrs, (UWord)data_addr)) {
+             VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
+           }
          }
 
          // attempt to print out the value
@@ -492,6 +496,10 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            return; // early!
          } else {
            tl_assert(res == 5 /* MC_Ok enum value */);
+           // record that this block has been rendered
+           if (!VG_(OSetWord_Contains)(encoded_addrs, (UWord)data_addr)) {
+             VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
+           }
          }
 
          // ok so now we know data_addr is legit, so we can dereference
@@ -532,12 +540,12 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                        (int)ai.Addr.Block.rwoffset /* offset in bytes */,
                        (int)element_size);
 
-           vg_assert(encoded_heap_base_addrs);
+           vg_assert(encoded_addrs);
 
            // avoid rendering duplicates, to prevent redundancies and infinite loops
-           if (!VG_(OSetWord_Contains)(encoded_heap_base_addrs,
+           if (!VG_(OSetWord_Contains)(encoded_addrs,
                                        (UWord)block_base_addr)) {
-             VG_(OSetWord_Insert)(encoded_heap_base_addrs,
+             VG_(OSetWord_Insert)(encoded_addrs,
                                   (UWord)block_base_addr);
 
              // scan until we find first UNALLOC address, and use that as
@@ -558,7 +566,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                  VG_(printf)("\n  elt: ");
                  // recurse!
                  ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
-                                    is_mem_defined_func, encoded_heap_base_addrs);
+                                    is_mem_defined_func, encoded_addrs);
                }
 
                cur_addr += element_size;
@@ -580,9 +588,9 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                        (int)ai.Addr.SegmentKind.hasX);
 
            // avoid rendering duplicates, to prevent redundancies and infinite loops
-           if (!VG_(OSetWord_Contains)(encoded_heap_base_addrs,
+           if (!VG_(OSetWord_Contains)(encoded_addrs,
                                        (UWord)ptr_val)) {
-             VG_(OSetWord_Insert)(encoded_heap_base_addrs, (UWord)ptr_val);
+             VG_(OSetWord_Insert)(encoded_addrs, (UWord)ptr_val);
 
              TyEnt* element_ent = ML_(TyEnts__index_by_cuOff)(tyents, NULL, ent->Te.TyPorR.typeR);
              SizeT element_size = pg_get_elt_size(element_ent);
@@ -605,7 +613,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                    VG_(printf)("\n  elt: ");
                    // recurse!
                    ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
-                                      is_mem_defined_func, encoded_heap_base_addrs);
+                                      is_mem_defined_func, encoded_addrs);
 
                    // if it's a '\0' character, then BREAK out of the
                    // loop since that terminates the string
@@ -624,19 +632,19 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
       case Te_TyRef:
          vg_assert(0); // unhandled
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
-                            is_mem_defined_func, encoded_heap_base_addrs);
+                            is_mem_defined_func, encoded_addrs);
          VG_(printf)("&");
          break;
       case Te_TyPtrMbr:
          vg_assert(0); // unhandled
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
-                            is_mem_defined_func, encoded_heap_base_addrs);
+                            is_mem_defined_func, encoded_addrs);
          VG_(printf)("*");
          break;
       case Te_TyRvalRef:
          vg_assert(0); // unhandled
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
-                            is_mem_defined_func, encoded_heap_base_addrs);
+                            is_mem_defined_func, encoded_addrs);
          VG_(printf)("&&");
          break;
       case Te_TyEnum:
@@ -673,91 +681,8 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
 
            // recurse!
            ML_(pg_pp_varinfo)(tyents, field->Te.Field.typeR, field_base_addr,
-                              is_mem_defined_func, encoded_heap_base_addrs);
+                              is_mem_defined_func, encoded_addrs);
          }
-
-         // copied from describe_type()
-#ifdef BLAHBLAH
-         case Te_TyStOrUn: {
-            Word       i;
-            GXResult   res;
-            MaybeULong mul;
-            XArray*    fieldRs;
-            UWord      fieldR;
-            TyEnt*     field = NULL;
-            PtrdiffT   offMin = 0, offMax1 = 0;
-            if (!ty->Te.TyStOrUn.isStruct) goto done;
-            fieldRs = ty->Te.TyStOrUn.fieldRs;
-            if (VG_(sizeXA)(fieldRs) == 0
-                && (ty->Te.TyStOrUn.typeR == 0)) goto done;
-            for (i = 0; i < VG_(sizeXA)( fieldRs ); i++ ) {
-               fieldR = *(UWord*)VG_(indexXA)( fieldRs, i );
-               field = ML_(TyEnts__index_by_cuOff)(tyents, NULL, fieldR);
-               vg_assert(field);
-               vg_assert(field->tag == Te_Field);
-               vg_assert(field->Te.Field.nLoc < 0
-                         || (field->Te.Field.nLoc > 0
-                             && field->Te.Field.pos.loc));
-               if (field->Te.Field.nLoc == -1) {
-                  res.kind = GXR_Addr;
-                  res.word = field->Te.Field.pos.offset;
-               } else {
-                  /* Re data_bias in this call, we should really send in
-                     a legitimate value.  But the expression is expected
-                     to be a constant expression, evaluation of which
-                     will not need to use DW_OP_addr and hence we can
-                     avoid the trouble of plumbing the data bias through
-                     to this point (if, indeed, it has any meaning; from
-                     which DebugInfo would we take the data bias? */
-                   res =  ML_(evaluate_Dwarf3_Expr)(
-                          field->Te.Field.pos.loc, field->Te.Field.nLoc,
-                          NULL/*fbGX*/, NULL/*RegSummary*/,
-                          0/*data_bias*/,
-                          True/*push_initial_zero*/);
-                  if (0) {
-                     VG_(printf)("QQQ ");
-                     ML_(pp_GXResult)(res);
-                     VG_(printf)("\n");
-                  }
-               }
-               if (res.kind != GXR_Addr)
-                  continue;
-               mul = ML_(sizeOfType)( tyents, field->Te.Field.typeR );
-               if (mul.b != True)
-                  goto done; /* size of field is unknown (?!) */
-               offMin  = res.word;
-               offMax1 = offMin + (PtrdiffT)mul.ul;
-               if (offMin == offMax1)
-                  continue;
-               vg_assert(offMin < offMax1);
-               if (offset >= offMin && offset < offMax1)
-                  break;
-            }
-            /* Did we find a suitable field? */
-            vg_assert(i >= 0 && i <= VG_(sizeXA)( fieldRs ));
-            if (i == VG_(sizeXA)( fieldRs )) {
-               ty = ML_(TyEnts__index_by_cuOff)(tyents, NULL,
-                                                   ty->Te.TyStOrUn.typeR);
-               vg_assert(ty);
-               if (ty->tag == Te_UNKNOWN) goto done;
-               vg_assert(ML_(TyEnt__is_type)(ty));
-               continue;
-            }
-            /* Yes.  'field' is it. */
-            vg_assert(field);
-            if (!field->Te.Field.name) goto done;
-            VG_(addBytesToXA)( xa, ".", 1 );
-            VG_(addBytesToXA)( xa, field->Te.Field.name,
-                               VG_(strlen)(field->Te.Field.name) );
-            offset -= offMin;
-            ty = ML_(TyEnts__index_by_cuOff)(tyents, NULL,
-                                             field->Te.Field.typeR );
-            vg_assert(ty);
-            if (ty->tag == Te_UNKNOWN) goto done;
-            /* keep going; look inside the field. */
-            break;
-         }
-#endif
 
          break;
       case Te_TyArray:
@@ -788,7 +713,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
               for (Long i = 0; i <= bound_ent->Te.Bound.boundU /* inclusive */; i++) {
                 VG_(printf)("\n    ");
                 ML_(pg_pp_varinfo)(tyents, ent->Te.TyArray.typeR, cur_elt_addr,
-                                   is_mem_defined_func, encoded_heap_base_addrs);
+                                   is_mem_defined_func, encoded_addrs);
                 cur_elt_addr += element_size;
               }
             }
@@ -816,7 +741,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          // typedef -- directly recurse into the typeR field
          VG_(printf)("typedef %s\n", ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name : "<anonymous>" );
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyTyDef.typeR, data_addr,
-                            is_mem_defined_func, encoded_heap_base_addrs);
+                            is_mem_defined_func, encoded_addrs);
          break;
       case Te_TyFn:
          vg_assert(0); // unhandled
@@ -833,7 +758,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          }
          */
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyQual.typeR, data_addr,
-                            is_mem_defined_func, encoded_heap_base_addrs);
+                            is_mem_defined_func, encoded_addrs);
          break;
       case Te_TyVoid:
          vg_assert(0); // unhandled
