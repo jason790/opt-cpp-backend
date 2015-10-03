@@ -540,7 +540,6 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          if (ai.tag == Addr_Block) {
            // if this is a heap pointer ...
            VG_(printf)("\"heap\"");
-           VG_(printf)("}");
 
            TyEnt* element_ent = ML_(TyEnts__index_by_cuOff)(tyents, NULL, ent->Te.TyPorR.typeR);
            SizeT element_size = pg_get_elt_size(element_ent);
@@ -563,35 +562,43 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
              VG_(OSetWord_Insert)(encoded_addrs,
                                   (UWord)block_base_addr);
 
+             VG_(printf)(", \"deref_val\":\n");
+
+             VG_(printf)("  {\"addr\":\"%p\", \"kind\":\"heap_block\", \"val\": [\n",
+                         (void*)block_base_addr);
+
              // scan until we find first UNALLOC address, and use that as
              // the upper bound of the heap array
              // TODO: any risk of overrun into other blocks? hopefully
              // not, due to redzones
              Addr cur_addr = block_base_addr;
+             Bool first = True;
              while (1) {
                res = is_mem_defined_func(cur_addr, element_size,
                                          &bad_addr, &otag);
                if (res == 6 /* MC_AddrErr enum value */) {
-                 VG_(printf)("\n  UNALLOC");
-                 break; // break on first unallocated byte
-               } else if (res == 7 /* MC_ValueErr enum value */) {
-                 VG_(printf)("\n  UNINIT");
-               } else {
-                 tl_assert(res == 5 /* MC_Ok enum value */);
-                 VG_(printf)("\n  elt: ");
-                 // recurse!
-                 ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
-                                    is_mem_defined_func, encoded_addrs);
+                 //VG_(printf)("\n  UNALLOC");
+                 break; // break on first unallocated byte since that marks the end of the block (hopefully!)
                }
 
+               if (first) {
+                 first = False;
+               } else {
+                 VG_(printf)(",\n");
+               }
+               ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
+                                  is_mem_defined_func, encoded_addrs);
                cur_addr += element_size;
              }
+
+             VG_(printf)("]}");
            } else {
              //VG_(printf)("heap pointer already encoded!\n");
            }
+
+           VG_(printf)("}");
          } else if (ai.tag == Addr_SegmentKind) {
            VG_(printf)("\"global\""); // I *think* this is true, but not 100% sure
-           VG_(printf)("}");
 
            // this is a pointer to some global client area, i think
            //
@@ -643,6 +650,8 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                }
              }
            }
+
+           VG_(printf)("}");
          } else {
            VG_(printf)("\"stack/other\""); // I *think* this is true, but not 100% sure
            VG_(printf)("}");
