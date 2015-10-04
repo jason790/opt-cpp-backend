@@ -16,6 +16,6 @@ all-traces: basic.vgtrace \
 %: %.c
 	gcc -ggdb -O0 -fno-omit-frame-pointer $< -o $@
 
-%.vgtrace: %
+%.vgtrace: % ../valgrind-3.11.0/inst/bin/valgrind
 	# always return 'success' to keep 'make' running even on errors
 	../valgrind-3.11.0/inst/bin/valgrind --tool=memcheck --source-filename=$<.c --trace-filename=$<.vgtrace ./$< || true
