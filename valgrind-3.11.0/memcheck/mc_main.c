@@ -5816,8 +5816,6 @@ static Bool mc_process_cmd_line_options(const HChar* arg)
      trace_fp = VG_(fopen)(tmp_str,
                            VKI_O_CREAT|VKI_O_WRONLY /* w */,
                            VKI_S_IRUSR|VKI_S_IWUSR /* u+rw */);
-     // NB: we never close trace_fp, so hopefully it's properly flushed
-     // and closed when Valgrind exits
    }
 
    else if VG_STR_CLO(arg, "--ignore-ranges", tmp_str) {
@@ -7631,6 +7629,8 @@ static void mc_print_stats (void)
 
 static void mc_fini ( Int exitcode )
 {
+   VG_(fclose)(trace_fp); // pgbovine - very important! TODO: what happens when program crashes?
+
    MC_(print_malloc_stats)();
 
    if (MC_(clo_leak_check) != LC_Off) {
