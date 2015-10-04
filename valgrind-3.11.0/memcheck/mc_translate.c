@@ -6276,8 +6276,8 @@ void pg_trace_inst(Addr a)
                                             "pg_encoded_addrs",
                                             VG_(free));
 
-    VG_(printf)("=== pg_trace_inst ===\n");
-    VG_(printf)("{\n");
+    VG_(fprintf)(trace_fp, "=== pg_trace_inst ===\n");
+    VG_(fprintf)(trace_fp, "{\n");
 
     Vg_FnNameKind kind = VG_(get_fnname_kind_from_IP)(a);
     const HChar *fn;
@@ -6291,7 +6291,8 @@ void pg_trace_inst(Addr a)
     //            haslinenum ? linenum : -999,
     //            (int)kind);
 
-    VG_(printf)("\"func_name\": \"%s\", \"line\": %d, \"IP\": \"%p\", \"kind\": %d, ",
+    VG_(fprintf)(trace_fp,
+                "\"func_name\": \"%s\", \"line\": %d, \"IP\": \"%p\", \"kind\": %d, ",
                 hasfn ? fn : "???",
                 haslinenum ? linenum : -999,
                 (void*)a,
@@ -6319,7 +6320,7 @@ void pg_trace_inst(Addr a)
     Word i;
     Bool first_elt = True;
 
-    VG_(printf)("\n\"globals\": {");
+    VG_(fprintf)(trace_fp, "\n\"globals\": {");
     for (i = 0; i < n; i++) {
       GlobalBlock* gb = VG_(indexXA)( gbs, i );
       tl_assert(gb->szB > 0);
@@ -6327,16 +6328,16 @@ void pg_trace_inst(Addr a)
       if (first_elt) {
         first_elt = False;
       } else {
-        VG_(printf)(",");
+        VG_(fprintf)(trace_fp, ",");
       }
 
-      Bool res = VG_(pg_traverse_global_var)(gb->fullname, gb->addr, is_mem_defined, pg_encoded_addrs);
+      Bool res = VG_(pg_traverse_global_var)(gb->fullname, gb->addr, is_mem_defined, pg_encoded_addrs, trace_fp);
       tl_assert(res);
     }
-    VG_(printf)("},\n");
+    VG_(fprintf)(trace_fp, "},\n");
 
     // print out an ordered list of globals since object keys have no order
-    VG_(printf)("\"ordered_globals\": [");
+    VG_(fprintf)(trace_fp, "\"ordered_globals\": [");
     first_elt = True;
     for (i = 0; i < n; i++) {
       GlobalBlock* gb = VG_(indexXA)( gbs, i );
@@ -6345,15 +6346,15 @@ void pg_trace_inst(Addr a)
       if (first_elt) {
         first_elt = False;
       } else {
-        VG_(printf)(",");
+        VG_(fprintf)(trace_fp, ",");
       }
-      VG_(printf)("\"%s\"", gb->fullname);
+      VG_(fprintf)(trace_fp, "\"%s\"", gb->fullname);
     }
-    VG_(printf)("],\n");
+    VG_(fprintf)(trace_fp, "],\n");
 
     VG_(deleteXA)( gbs );
 
-    VG_(printf)("\"stack\": [\n");
+    VG_(fprintf)(trace_fp, "\"stack\": [\n");
     Bool first_stack_entry = True;
     for (i = 0; i < stack_depth; i++) {
       Addr cur_ip = ips[i];
@@ -6369,17 +6370,18 @@ void pg_trace_inst(Addr a)
       if (first_stack_entry) {
         first_stack_entry = False;
       } else {
-        VG_(printf)(",\n");
+        VG_(fprintf)(trace_fp, ",\n");
       }
 
-      VG_(printf)("{");
+      VG_(fprintf)(trace_fp, "{");
 
       const HChar *cur_fn;
       Bool cur_hasfn = VG_(get_fnname)(cur_ip, &cur_fn);
       UInt cur_linenum;
       Bool cur_haslinenum = VG_(get_linenum)(cur_ip, &cur_linenum);
 
-      VG_(printf)("\"func_name\":\"%s\", \"line\": %d, \"SP\": \"%p\",  \"FP\": \"%p\", ",
+      VG_(fprintf)(trace_fp,
+                  "\"func_name\":\"%s\", \"line\": %d, \"SP\": \"%p\",  \"FP\": \"%p\", ",
                   cur_hasfn ? cur_fn : "???",
                   cur_haslinenum ? cur_linenum : -999,
                   (void*)cur_sp, (void*)cur_fp);
@@ -6387,7 +6389,7 @@ void pg_trace_inst(Addr a)
       // stack blocks
       XArray* blocks = VG_(di_get_stack_blocks_at_ip)(cur_ip, False);
       if (blocks) {
-        VG_(printf)(", \"locals\": {\n");
+        VG_(fprintf)(trace_fp, ", \"locals\": {\n");
         first_elt = True;
         int j;
         for (j = 0; j < VG_(sizeXA)(blocks); j++) {
@@ -6399,44 +6401,42 @@ void pg_trace_inst(Addr a)
           if (first_elt) {
             first_elt = False;
           } else {
-            VG_(printf)(",");
+            VG_(fprintf)(trace_fp, ",");
           }
 
           bool res = VG_(pg_traverse_local_var)(sb->fullname, var_addr, cur_ip, cur_sp, cur_fp,
-                                                is_mem_defined, pg_encoded_addrs);
+                                                is_mem_defined, pg_encoded_addrs, trace_fp);
           tl_assert(res);
         }
-        VG_(printf)("}");
+        VG_(fprintf)(trace_fp, "}");
 
         // print out an ordered list of locals since object keys have no order
-        VG_(printf)(",\n\"ordered_varnames\": [");
+        VG_(fprintf)(trace_fp, ",\n\"ordered_varnames\": [");
         first_elt = True;
         for (j = 0; j < VG_(sizeXA)(blocks); j++) {
           StackBlock* sb = VG_(indexXA)(blocks, j);
           if (first_elt) {
             first_elt = False;
           } else {
-            VG_(printf)(",");
+            VG_(fprintf)(trace_fp, ",");
           }
-          VG_(printf)("\"%s\"", sb->fullname);
+          VG_(fprintf)(trace_fp, "\"%s\"", sb->fullname);
         }
-        VG_(printf)("]");
+        VG_(fprintf)(trace_fp, "]");
 
         VG_(deleteXA)(blocks);
       }
 
-      VG_(printf)("}");
+      VG_(fprintf)(trace_fp, "}");
     }
-    VG_(printf)("]\n");
-
-    VG_(printf)("\n");
+    VG_(fprintf)(trace_fp, "]\n");
 
     // reset this after every execution step so that we can re-encode
     // the same blocks at the next step
     VG_(OSetWord_Destroy)(pg_encoded_addrs);
     pg_encoded_addrs = NULL;
 
-    VG_(printf)("}\n");
+    VG_(fprintf)(trace_fp, "}\n");
   }
 }
 

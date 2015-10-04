@@ -162,7 +162,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                          UWord cuOff,
                          Addr data_addr,
                          int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
-                         OSet* encoded_addrs);
+                         OSet* encoded_addrs, VgFile* trace_fp);
 
 /* Generates a total ordering on TyEnts based only on their .cuOff
    fields. */

@@ -50,8 +50,6 @@
 
 #include "pub_tool_mallocfree.h" // pgbovine - potential abstration violation with _tool_.h include, ergh
 
-extern VgFile* trace_fp; // pgbovine
-
 /* Does this TyEnt denote a type, as opposed to some other kind of
    thing? */
 
@@ -390,10 +388,12 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                          UWord cuOff,
                          Addr data_addr,
                          int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
-                         OSet* encoded_addrs)
+                         OSet* encoded_addrs,
+                         VgFile* trace_fp)
 {
    TyEnt* ent = ML_(TyEnts__index_by_cuOff)( tyents, NULL, cuOff );
    if (!ent) {
+      vg_assert(0); // pgbovine - die hard
       VG_(printf)("**type-has-invalid-cuOff**");
       return;
    }
@@ -411,7 +411,8 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
          }
 
-         VG_(printf)("{\"addr\":\"%p\", \"kind\":\"base\", \"type\":\"%s\", \"size\":%u, \"val\":",
+         VG_(fprintf)(trace_fp,
+                     "{\"addr\":\"%p\", \"kind\":\"base\", \"type\":\"%s\", \"size\":%u, \"val\":",
                      (void*)data_addr,
                      ent->Te.TyBase.name,
                      ent->Te.TyBase.szB);
@@ -420,10 +421,10 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          res = is_mem_defined_func(data_addr, ent->Te.TyBase.szB,
                                        &bad_addr, &otag);
          if (res == 6 /* MC_AddrErr enum value */) {
-           VG_(printf)("\"<UNALLOCATED>\"}");
+           VG_(fprintf)(trace_fp, "\"<UNALLOCATED>\"}");
            return; // early!
          } else if (res == 7 /* MC_ValueErr enum value */) {
-           VG_(printf)("\"<UNINITIALIZED>\"}");
+           VG_(fprintf)(trace_fp, "\"<UNINITIALIZED>\"}");
            return; // early!
          } else {
            tl_assert(res == 5 /* MC_Ok enum value */);
@@ -445,28 +446,28 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
              }
              JsonNode* node = json_mkstring(str);
              char* encoded = json_encode(node);
-             VG_(printf)("%s", encoded);
+             VG_(fprintf)(trace_fp, "%s", encoded);
              VG_(free)(encoded);
              json_delete(node);
            } else if (ent->Te.TyBase.szB == sizeof(short)) {
-             VG_(printf)("%d", *((short*)data_addr));
+             VG_(fprintf)(trace_fp, "%d", *((short*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(int)) {
-             VG_(printf)("%d", *((int*)data_addr));
+             VG_(fprintf)(trace_fp, "%d", *((int*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(long int)) {
-             VG_(printf)("%ld", *((long int*)data_addr));
+             VG_(fprintf)(trace_fp, "%ld", *((long int*)data_addr));
            } else {
              // what other stuff is here?!?
              vg_assert(0);
            }
          } else if (ent->Te.TyBase.enc == 'U') {
            if (ent->Te.TyBase.szB == sizeof(unsigned char)) {
-             VG_(printf)("%u", *((unsigned char*)data_addr));
+             VG_(fprintf)(trace_fp, "%u", *((unsigned char*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(unsigned short)) {
-             VG_(printf)("%u", *((unsigned short*)data_addr));
+             VG_(fprintf)(trace_fp, "%u", *((unsigned short*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(unsigned int)) {
-             VG_(printf)("%u", *((unsigned int*)data_addr));
+             VG_(fprintf)(trace_fp, "%u", *((unsigned int*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(unsigned long int)) {
-             VG_(printf)("%lu", *((unsigned long int*)data_addr));
+             VG_(fprintf)(trace_fp, "%lu", *((unsigned long int*)data_addr));
            } else {
              // what other stuff is here?!?
              vg_assert(0);
@@ -474,13 +475,13 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          } else if (ent->Te.TyBase.enc == 'F') {
            // careful about subtleties around floats and doubles and stuff ..
            if (ent->Te.TyBase.szB == sizeof(float)) {
-             VG_(printf)("%f", *((float*)data_addr));
+             VG_(fprintf)(trace_fp, "%f", *((float*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(double)) {
-             VG_(printf)("%f", *((double*)data_addr));
+             VG_(fprintf)(trace_fp, "%f", *((double*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(long double)) {
              // TODO: doesn't currently work for some reason :(
              // long doubles are shown as uninit
-             VG_(printf)("%Lf", *((long double*)data_addr));
+             VG_(fprintf)(trace_fp, "%Lf", *((long double*)data_addr));
            } else {
              // what other stuff is here?!?
              vg_assert(0);
@@ -492,7 +493,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            vg_assert(0); // are there any cases left?
          }
 
-         VG_(printf)("}");
+         VG_(fprintf)(trace_fp, "}");
          break;
       case Te_TyPtr:
          // record that this block has been rendered
@@ -500,19 +501,20 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
          }
 
-         VG_(printf)("{\"addr\":\"%p\", \"kind\":\"pointer\", \"size\":%u, \"val\":",
-                     (void*)data_addr,
-                     ent->Te.TyPorR.szB);
+         VG_(fprintf)(trace_fp,
+                      "{\"addr\":\"%p\", \"kind\":\"pointer\", \"size\":%u, \"val\":",
+                      (void*)data_addr,
+                      ent->Te.TyPorR.szB);
 
          // check whether this memory has been allocated and/or initialized
          res = is_mem_defined_func(data_addr, ent->Te.TyPorR.szB,
                                    &bad_addr, &otag);
 
          if (res == 6 /* MC_AddrErr enum value */) {
-           VG_(printf)("\"<UNALLOCATED>\"}");
+           VG_(fprintf)(trace_fp, "\"<UNALLOCATED>\"}");
            return; // early!
          } else if (res == 7 /* MC_ValueErr enum value */) {
-           VG_(printf)("\"<UNINITIALIZED>\"}");
+           VG_(fprintf)(trace_fp, "\"<UNINITIALIZED>\"}");
            return; // early!
          } else {
            tl_assert(res == 5 /* MC_Ok enum value */);
@@ -521,7 +523,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          // ok so now we know data_addr is legit, so we can dereference
          // it to get its value
          Addr ptr_val = *((Addr*)data_addr);
-         VG_(printf)("\"%p\"", (void*)ptr_val);
+         VG_(fprintf)(trace_fp, "\"%p\"", (void*)ptr_val);
 
          // what do we do now? ptr_val is either a pointer:
          // - that's invalid (e.g., null, garbage)
@@ -564,10 +566,11 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
              VG_(OSetWord_Insert)(encoded_addrs,
                                   (UWord)block_base_addr);
 
-             VG_(printf)(", \"deref_val\":\n");
+             VG_(fprintf)(trace_fp, ", \"deref_val\":\n");
 
-             VG_(printf)("{\"addr\":\"%p\", \"kind\":\"heap_block\", \"val\": [\n  ",
-                         (void*)block_base_addr);
+             VG_(fprintf)(trace_fp,
+                          "{\"addr\":\"%p\", \"kind\":\"heap_block\", \"val\": [\n  ",
+                          (void*)block_base_addr);
 
              // scan until we find first UNALLOC address, and use that as
              // the upper bound of the heap array
@@ -586,19 +589,19 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                if (first_elt) {
                  first_elt = False;
                } else {
-                 VG_(printf)(",\n  ");
+                 VG_(fprintf)(trace_fp, ",\n  ");
                }
                ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
-                                  is_mem_defined_func, encoded_addrs);
+                                  is_mem_defined_func, encoded_addrs, trace_fp);
                cur_addr += element_size;
              }
 
-             VG_(printf)("]}");
+             VG_(fprintf)(trace_fp, "]}");
            } else {
              //VG_(printf)("heap pointer already encoded!\n");
            }
 
-           VG_(printf)("}");
+           VG_(fprintf)(trace_fp, "}");
          } else if (ai.tag == Addr_SegmentKind) {
            // this is a pointer to some global client area, i think
            //
@@ -629,10 +632,10 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                  element_ent->Te.TyBase.enc == 'S' &&
                  element_ent->Te.TyBase.szB == sizeof(char)) {
 
-               VG_(printf)(", \"deref_val\":\n");
+               VG_(fprintf)(trace_fp, ", \"deref_val\":\n");
 
-               VG_(printf)("{\"addr\":\"%p\", \"kind\":\"global_string\", \"val\": [\n  ",
-                           (void*)ptr_val);
+               VG_(fprintf)(trace_fp, "{\"addr\":\"%p\", \"kind\":\"global_string\", \"val\": [\n  ",
+                            (void*)ptr_val);
 
                Addr cur_addr = ptr_val;
                Bool first_elt = True;
@@ -646,11 +649,11 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                    if (first_elt) {
                      first_elt = False;
                    } else {
-                     VG_(printf)(",\n  ");
+                     VG_(fprintf)(trace_fp, ",\n  ");
                    }
 
                    ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, cur_addr,
-                                      is_mem_defined_func, encoded_addrs);
+                                      is_mem_defined_func, encoded_addrs, trace_fp);
 
                    // if it's a '\0' character, then BREAK out of the
                    // loop since that terminates the string
@@ -661,40 +664,40 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                  cur_addr += element_size;
                }
 
-               VG_(printf)("]}");
+               VG_(fprintf)(trace_fp, "]}");
              } else {
                // don't do anything!
              }
            }
 
-           VG_(printf)("}");
+           VG_(fprintf)(trace_fp, "}");
          } else {
-           VG_(printf)("}");
+           VG_(fprintf)(trace_fp, "}");
            //VG_(printf)("<other ptr %p, tag: %d>", (void*)ptr_val, (int)ai.tag);
          }
          break;
       case Te_TyRef:
          vg_assert(0); // unhandled
-         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
-                            is_mem_defined_func, encoded_addrs);
-         VG_(printf)("&");
+         //ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
+         //                   is_mem_defined_func, encoded_addrs, trace_fp);
+         //VG_(printf)("&");
          break;
       case Te_TyPtrMbr:
          vg_assert(0); // unhandled
-         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
-                            is_mem_defined_func, encoded_addrs);
-         VG_(printf)("*");
+         //ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
+         //                   is_mem_defined_func, encoded_addrs, trace_fp);
+         //VG_(printf)("*");
          break;
       case Te_TyRvalRef:
          vg_assert(0); // unhandled
-         ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
-                            is_mem_defined_func, encoded_addrs);
-         VG_(printf)("&&");
+         //ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
+         //                   is_mem_defined_func, encoded_addrs, trace_fp);
+         //VG_(printf)("&&");
          break;
       case Te_TyEnum:
          vg_assert(0); // unhandled
-         VG_(printf)("enum %s", ent->Te.TyEnum.name ? ent->Te.TyEnum.name
-                                                    : "<anonymous>" );
+         //VG_(printf)("enum %s", ent->Te.TyEnum.name ? ent->Te.TyEnum.name
+         //                                           : "<anonymous>" );
          break;
       case Te_TyStOrUn:
          //VG_(printf)("%s %s",
@@ -704,10 +707,11 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          // TODO: handle unions later, let's just focus on structs for now
          vg_assert(ent->Te.TyStOrUn.isStruct);
 
-         VG_(printf)("{\"addr\":\"%p\", \"kind\":\"struct\", \"type\":\"%s\", \"val\": {\n  ",
-                     (void*)data_addr,
-                     // TODO: patch later with typedef name if possible
-                     ent->Te.TyStOrUn.name ? ent->Te.TyStOrUn.name : "<anonymous>");
+         VG_(fprintf)(trace_fp,
+                      "{\"addr\":\"%p\", \"kind\":\"struct\", \"type\":\"%s\", \"val\": {\n  ",
+                      (void*)data_addr,
+                      // TODO: patch later with typedef name if possible
+                      ent->Te.TyStOrUn.name ? ent->Te.TyStOrUn.name : "<anonymous>");
 
          // iterate into ent->Te.TyStOrUn.fieldRs to print all fields
          XArray* fieldRs = ent->Te.TyStOrUn.fieldRs;
@@ -728,7 +732,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            if (first_elt) {
              first_elt = False;
            } else {
-             VG_(printf)(",\n  ");
+             VG_(fprintf)(trace_fp, ",\n  ");
            }
 
            Addr field_base_addr = data_addr + field->Te.Field.pos.offset;
@@ -736,12 +740,12 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            //            field->Te.Field.name,
            //            (int)field->Te.Field.pos.offset);
 
-           VG_(printf)("\"%s\":", field->Te.Field.name);
+           VG_(fprintf)(trace_fp, "\"%s\":", field->Te.Field.name);
            ML_(pg_pp_varinfo)(tyents, field->Te.Field.typeR, field_base_addr,
-                              is_mem_defined_func, encoded_addrs);
+                              is_mem_defined_func, encoded_addrs, trace_fp);
          }
 
-         VG_(printf)("}}");
+         VG_(fprintf)(trace_fp, "}}");
 
          break;
       case Te_TyArray:
@@ -763,9 +767,10 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                 && bound_ent->Te.Bound.boundL == 0) {
               // yay, an array with known bounds!
 
-              VG_(printf)("{\"addr\":\"%p\", \"kind\":\"array\", \"size\":%u, \"val\": [\n  ",
-                          (void*)data_addr,
-                          (unsigned int)(bound_ent->Te.Bound.boundU + 1));
+              VG_(fprintf)(trace_fp,
+                           "{\"addr\":\"%p\", \"kind\":\"array\", \"size\":%u, \"val\": [\n  ",
+                           (void*)data_addr,
+                           (unsigned int)(bound_ent->Te.Bound.boundU + 1));
 
               first_elt = True;
               Addr cur_elt_addr = data_addr;
@@ -773,20 +778,20 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
                 if (first_elt) {
                   first_elt = False;
                 } else {
-                  VG_(printf)(",\n  ");
+                  VG_(fprintf)(trace_fp, ",\n  ");
                 }
 
                 ML_(pg_pp_varinfo)(tyents, ent->Te.TyArray.typeR, cur_elt_addr,
-                                   is_mem_defined_func, encoded_addrs);
+                                   is_mem_defined_func, encoded_addrs, trace_fp);
                 cur_elt_addr += element_size;
               }
 
-              VG_(printf)("\n]}");
+              VG_(fprintf)(trace_fp, "\n]}");
             }
             else if (bound_ent->Te.Bound.knownL && (!bound_ent->Te.Bound.knownU)
                 && bound_ent->Te.Bound.boundL == 0) {
               vg_assert(0); // unhandled - unknown bounds. TODO: maybe treat like a pointer?
-              VG_(printf)("[]");
+              //VG_(printf)("[]");
             }
             else {
               vg_assert(0); // unhandled // no bounds!
@@ -800,24 +805,25 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
             */
          } else {
             vg_assert(0); // unhandled // no bounds!
-            VG_(printf)("%s", "[??]");
+            //VG_(printf)("%s", "[??]");
          }
          break;
       case Te_TyTyDef:
          // typedef -- directly recurse into the typeR field
          //VG_(printf)("typedef %s\n", ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name : "<anonymous>" );
-         VG_(printf)("{\"addr\":\"%p\", \"kind\":\"typedef\", \"type\":\"%s\", \"val\": {\n  ",
-                     (void*)data_addr,
-                     ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name : "<anonymous>");
+         VG_(fprintf)(trace_fp,
+                      "{\"addr\":\"%p\", \"kind\":\"typedef\", \"type\":\"%s\", \"val\": {\n  ",
+                      (void*)data_addr,
+                      ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name : "<anonymous>");
 
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyTyDef.typeR, data_addr,
-                            is_mem_defined_func, encoded_addrs);
+                            is_mem_defined_func, encoded_addrs, trace_fp);
 
-         VG_(printf)("}}");
+         VG_(fprintf)(trace_fp, "}}");
          break;
       case Te_TyFn:
          vg_assert(0); // unhandled
-         VG_(printf)("%s", "<function_type>");
+         //VG_(printf)("%s", "<function_type>");
          break;
       case Te_TyQual:
          // PG - ignore qualifiers and traverse inward!
@@ -830,16 +836,16 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          }
          */
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyQual.typeR, data_addr,
-                            is_mem_defined_func, encoded_addrs);
+                            is_mem_defined_func, encoded_addrs, trace_fp);
          break;
       case Te_TyVoid:
          vg_assert(0); // unhandled
-         VG_(printf)("%svoid",
-                     ent->Te.TyVoid.isFake ? "fake" : "");
+         //VG_(printf)("%svoid",
+         //            ent->Te.TyVoid.isFake ? "fake" : "");
          break;
       case Te_UNKNOWN:
          vg_assert(0); // unhandled
-         ML_(pp_TyEnt)(ent);
+         //ML_(pp_TyEnt)(ent);
          break;
       default:
          goto unhandled;
@@ -847,8 +853,8 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
    return;
 
   unhandled:
-   VG_(printf)("pg_pp_varinfo:unhandled: ");
-   ML_(pp_TyEnt)(ent);
+   //VG_(printf)("pg_pp_varinfo:unhandled: ");
+   //ML_(pp_TyEnt)(ent);
    vg_assert(0);
 }
 

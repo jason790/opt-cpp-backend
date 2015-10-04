@@ -34,6 +34,7 @@
 #include "pub_tool_basics.h"   // VG_ macro
 #include "pub_tool_xarray.h"   // XArray
 #include "pub_tool_oset.h"   // pgbovine
+#include "pub_tool_libcprint.h"   // pgbovine
 
 /*====================================================================*/
 /*=== Obtaining debug information                                  ===*/
@@ -123,12 +124,12 @@ Bool VG_(get_data_description)(
 // pgbovine
 Bool VG_(pg_traverse_global_var)(const HChar* varname, Addr data_addr,
                                  int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
-                                 OSet* encoded_addrs);
+                                 OSet* encoded_addrs, VgFile* trace_fp);
 
 Bool VG_(pg_traverse_local_var) (const HChar* varname, Addr data_addr,
                                  Addr ip, Addr sp, Addr fp,
                                  int is_mem_defined_func(Addr, SizeT, Addr*, UInt*),
-                                 OSet* encoded_addrs);
+                                 OSet* encoded_addrs, VgFile* trace_fp);
 
 /* Succeeds if the address is within a shared object or the main executable.
    It doesn't matter if debug info is present or not. */
