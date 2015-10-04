@@ -6381,7 +6381,7 @@ void pg_trace_inst(Addr a)
       Bool cur_haslinenum = VG_(get_linenum)(cur_ip, &cur_linenum);
 
       VG_(fprintf)(trace_fp,
-                  "\"func_name\":\"%s\", \"line\": %d, \"SP\": \"%p\",  \"FP\": \"%p\", ",
+                  "\"func_name\":\"%s\", \"line\": %d, \"SP\": \"%p\",  \"FP\": \"%p\"",
                   cur_hasfn ? cur_fn : "???",
                   cur_haslinenum ? cur_linenum : -999,
                   (void*)cur_sp, (void*)cur_fp);
