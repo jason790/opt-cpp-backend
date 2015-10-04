@@ -96,9 +96,12 @@ def process_json_obj(obj):
 def encode_value(obj, heap):
     if obj['kind'] == 'base':
         return ['C_DATA', obj['addr'], obj['type'], obj['val']]
-        pass
+
     elif obj['kind'] == 'pointer':
-        pass
+        if 'deref_val' in obj:
+            encode_value(obj['deref_val'], heap) # update the heap
+        return ['C_PTR', obj['addr'], obj['val']]
+
     elif obj['kind'] == 'struct':
         ret = ['INSTANCE']
         ret.append(obj['type'])
@@ -121,10 +124,10 @@ def encode_value(obj, heap):
         # pass on the typedef type name into obj['val'], then recurse
         obj['val']['type'] = obj['type']
         return encode_value(obj['val'], heap)
+
     elif obj['kind'] == 'heap_block':
         pass
-    elif obj['kind'] == 'global_string':
-        pass
+
     else:
         assert False
 

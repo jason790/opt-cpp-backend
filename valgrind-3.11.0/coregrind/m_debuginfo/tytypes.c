@@ -634,7 +634,10 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
 
                VG_(fprintf)(trace_fp, ", \"deref_val\":\n");
 
-               VG_(fprintf)(trace_fp, "{\"addr\":\"%p\", \"kind\":\"global_string\", \"val\": [\n  ",
+               // note that we use the 'heap_block' kind even though
+               // *technically* these global strings aren't on the heap;
+               // they're in a special 'globals' area; but whatevers!
+               VG_(fprintf)(trace_fp, "{\"addr\":\"%p\", \"kind\":\"heap_block\", \"val\": [\n  ",
                             (void*)ptr_val);
 
                Addr cur_addr = ptr_val;
