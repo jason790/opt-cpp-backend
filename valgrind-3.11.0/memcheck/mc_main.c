@@ -5814,7 +5814,7 @@ static Bool mc_process_cmd_line_options(const HChar* arg)
    }
    else if VG_STR_CLO(arg, "--trace-filename", tmp_str) {
      trace_fp = VG_(fopen)(tmp_str,
-                           VKI_O_CREAT|VKI_O_WRONLY /* w */,
+                           VKI_O_CREAT|VKI_O_TRUNC|VKI_O_WRONLY, // otherwise it dont work right :(
                            VKI_S_IRUSR|VKI_S_IWUSR /* u+rw */);
    }
 
