@@ -93,24 +93,40 @@ def process_json_obj(obj):
 
 
 # returns an encoded value in OPT format and possibly mutates the heap
-def encode_value(val, heap):
-    if val['kind'] == 'base':
+def encode_value(obj, heap):
+    if obj['kind'] == 'base':
+        return ['C_DATA', obj['addr'], obj['type'], obj['val']]
         pass
-    elif val['kind'] == 'pointer':
+    elif obj['kind'] == 'pointer':
         pass
-    elif val['kind'] == 'struct':
+    elif obj['kind'] == 'struct':
+        ret = ['INSTANCE']
+        ret.append(obj['type'])
+
+        # sort struct members by address so that they look ORDERED
+        members = obj['val'].items()
+        members.sort(key=lambda e: e[1]['addr'])
+        for k, v in members:
+            entry = [k, encode_value(v, heap)] # TODO: is an infinite loop possible here?
+            ret.append(entry)
+        return ret
+
+    elif obj['kind'] == 'array':
+        ret = ['LIST']
+        for e in obj['val']:
+            ret.append(encode_value(e, heap)) # TODO: is an infinite loop possible here?
+        return ret
+
+    elif obj['kind'] == 'typedef':
+        # pass on the typedef type name into obj['val'], then recurse
+        obj['val']['type'] = obj['type']
+        return encode_value(obj['val'], heap)
+    elif obj['kind'] == 'heap_block':
         pass
-    elif val['kind'] == 'array':
-        pass
-    elif val['kind'] == 'typedef':
-        pass
-    elif val['kind'] == 'heap_block':
-        pass
-    elif val['kind'] == 'global_string':
+    elif obj['kind'] == 'global_string':
         pass
     else:
         assert False
-    return val # stent
 
 
 if __name__ == '__main__':
