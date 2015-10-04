@@ -44,6 +44,7 @@
 #include "pub_tool_stacktrace.h" // pgbovine
 #include "pub_tool_threadstate.h" // pgbovine
 #include "pub_tool_oset.h" // pgbovine
+extern VgFile* trace_fp; // pgbovine
 
 #include "mc_include.h"
 

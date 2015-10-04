@@ -71,6 +71,8 @@
 #define DEBUG_FSM 0
 
 
+extern VgFile* trace_fp; // pgbovine
+
 #include "pub_tool_libcbase.h"
 #include "pub_tool_mallocfree.h"
 

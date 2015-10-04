@@ -50,6 +50,8 @@
 
 #include "pub_tool_mallocfree.h" // pgbovine - potential abstration violation with _tool_.h include, ergh
 
+extern VgFile* trace_fp; // pgbovine
+
 /* Does this TyEnt denote a type, as opposed to some other kind of
    thing? */
 

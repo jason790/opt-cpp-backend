@@ -51,6 +51,8 @@
 #include "mc_include.h"
 #include "memcheck.h"   /* for client requests */
 
+#include "pub_tool_vki.h" // pgbovine
+
 
 /* Set to 1 to enable handwritten assembly helpers on targets for
    which it is supported. */
@@ -5710,6 +5712,7 @@ static const HChar * MC_(parse_leak_heuristics_tokens) =
    heuristic. */
 
 static Bool pg_source_filename_init = False;
+VgFile* trace_fp = NULL;
 
 static Bool mc_process_cmd_line_options(const HChar* arg)
 {
@@ -5808,6 +5811,13 @@ static Bool mc_process_cmd_line_options(const HChar* arg)
    else if VG_STR_CLO(arg, "--source-filename", tmp_str) {
      VG_(strcpy)(pg_source_filename, tmp_str);
      pg_source_filename_init = True;
+   }
+   else if VG_STR_CLO(arg, "--trace-filename", tmp_str) {
+     trace_fp = VG_(fopen)(tmp_str,
+                           VKI_O_WRONLY,
+                           VKI_S_IRUSR|VKI_S_IWUSR);
+     // NB: we never close trace_fp, so hopefully it's properly flushed
+     // and closed when Valgrind exits
    }
 
    else if VG_STR_CLO(arg, "--ignore-ranges", tmp_str) {
@@ -7381,6 +7391,7 @@ static void ocache_sarp_Clear_Origins ( Addr a, UWord len ) {
 static void mc_post_clo_init ( void )
 {
    tl_assert(pg_source_filename_init); // pgbovine -- requires this!
+   tl_assert(trace_fp); // pgbovine
 
    /* If we've been asked to emit XML, mash around various other
       options so as to constrain the output somewhat. */
