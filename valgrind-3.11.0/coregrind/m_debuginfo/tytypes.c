@@ -812,14 +812,14 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          // typedef -- directly recurse into the typeR field
          //VG_(printf)("typedef %s\n", ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name : "<anonymous>" );
          VG_(fprintf)(trace_fp,
-                      "{\"addr\":\"%p\", \"kind\":\"typedef\", \"type\":\"%s\", \"val\": {\n  ",
+                      "{\"addr\":\"%p\", \"kind\":\"typedef\", \"type\":\"%s\", \"val\":\n  ",
                       (void*)data_addr,
                       ent->Te.TyTyDef.name ? ent->Te.TyTyDef.name : "<anonymous>");
 
          ML_(pg_pp_varinfo)(tyents, ent->Te.TyTyDef.typeR, data_addr,
                             is_mem_defined_func, encoded_addrs, trace_fp);
 
-         VG_(fprintf)(trace_fp, "}}");
+         VG_(fprintf)(trace_fp, "}");
          break;
       case Te_TyFn:
          vg_assert(0); // unhandled
