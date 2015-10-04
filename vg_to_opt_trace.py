@@ -31,8 +31,8 @@ def process_record(lines):
 
 def process_json_obj(obj):
     print '---'
-    pp.pprint(obj)
-    print
+    #pp.pprint(obj)
+    #print
 
     assert len(obj['stack']) > 0 # C programs always have a main at least!
     obj['stack'].reverse() # make the stack grow down to follow convention
@@ -126,7 +126,12 @@ def encode_value(obj, heap):
         return encode_value(obj['val'], heap)
 
     elif obj['kind'] == 'heap_block':
-        pass
+        assert obj['addr'] not in heap
+        new_elt = ['LIST']
+        for e in obj['val']:
+            new_elt.append(encode_value(e, heap)) # TODO: is an infinite loop possible here?
+        heap[obj['addr']] = new_elt
+        # TODO: what about heap-to-heap pointers?
 
     else:
         assert False
