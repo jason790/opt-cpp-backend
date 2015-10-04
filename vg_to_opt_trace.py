@@ -94,7 +94,22 @@ def process_json_obj(obj):
 
 # returns an encoded value in OPT format and possibly mutates the heap
 def encode_value(val, heap):
-    pass
+    if val['kind'] == 'base':
+        pass
+    elif val['kind'] == 'pointer':
+        pass
+    elif val['kind'] == 'struct':
+        pass
+    elif val['kind'] == 'array':
+        pass
+    elif val['kind'] == 'typedef':
+        pass
+    elif val['kind'] == 'heap_block':
+        pass
+    elif val['kind'] == 'global_string':
+        pass
+    else:
+        assert False
     return val # stent
 
 
