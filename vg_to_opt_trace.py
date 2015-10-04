@@ -36,7 +36,7 @@ def process_json_obj(obj):
 
     assert len(obj['stack']) > 0 # C programs always have a main at least!
     obj['stack'].reverse() # make the stack grow down to follow convention
-
+    top_stack_entry = obj['stack'][-1]
 
     # create an execution point object
     ret = {}
@@ -48,7 +48,7 @@ def process_json_obj(obj):
     ret['ordered_globals'] = obj['ordered_globals']
 
     ret['line'] = obj['line']
-    ret['func_name'] = obj['stack'][-1]['func_name'] # use the 'topmost' (last) entry
+    ret['func_name'] = top_stack_entry['func_name'] # use the 'topmost' entry's name
 
     # TODO: handle more event types
     ret['event'] = 'step_line'
@@ -57,6 +57,31 @@ def process_json_obj(obj):
     ret['heap'] = heap
     ret['stack_to_render'] = stack
     ret['globals'] = globals_obj
+
+    for e in obj['stack']:
+        stack_obj = {}
+        stack.append(stack_obj)
+
+        stack_obj['func_name'] = e['func_name']
+        stack_obj['ordered_varnames'] = e['ordered_varnames']
+        stack_obj['is_highlighted'] = e is top_stack_entry
+
+        # hacky: does FP (the frame pointer) serve as a unique enough frame ID?
+        # sometimes it's set to 0 :/
+        stack_obj['frame_id'] = e['FP']
+
+        stack_obj['unique_hash'] = stack_obj['func_name'] + '_' + stack_obj['frame_id']
+
+        # unsupported
+        stack_obj['is_parent'] = False
+        stack_obj['is_zombie'] = False
+        stack_obj['parent_frame_id_list'] = []
+
+        enc_locals = {}
+        stack_obj['encoded_locals'] = enc_locals
+
+        # TODO: handle enc_locals
+
 
     pp.pprint(ret)
     print
