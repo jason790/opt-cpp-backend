@@ -3,8 +3,8 @@
 
 # Created 2015-10-04 by Philip Guo
 
-# pass in the $basename of a program. assumes that the trace is
-# $basename.trace and the source file is $basename.c
+# pass in the $basename of a program. assumes that the Valgrind-produced
+# trace is $basename.vgtrace and the source file is $basename.c
 
 
 # this is pretty brittle and dependent on the user's gcc version and
@@ -166,7 +166,7 @@ if __name__ == '__main__':
 
     success = True
 
-    for line in open(basename + '.trace'):
+    for line in open(basename + '.vgtrace'):
         line = line.strip()
         if line == RECORD_SEP:
             success = process_record(cur_record_lines)
