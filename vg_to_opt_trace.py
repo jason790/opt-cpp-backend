@@ -37,18 +37,20 @@ RECORD_SEP = '=== pg_trace_inst ==='
 
 all_execution_points = []
 
+# True if successful parse, False if not
 def process_record(lines):
     if not lines:
-        return
+        return True # 'nil success case to keep the parser going
+
     rec = '\n'.join(lines)
-    #print '---'
-    #print rec
     try:
         obj = json.loads(rec)
-        x = process_json_obj(obj)
-        all_execution_points.append(x)
     except ValueError:
         print >> sys.stderr, "Ugh, bad record!"
+        return False
+    x = process_json_obj(obj)
+    all_execution_points.append(x)
+    return True
 
 
 def process_json_obj(obj):
@@ -161,15 +163,23 @@ def encode_value(obj, heap):
 if __name__ == '__main__':
     basename = sys.argv[1]
     cur_record_lines = []
+
+    success = True
+
     for line in open(basename + '.trace'):
         line = line.strip()
         if line == RECORD_SEP:
-            process_record(cur_record_lines)
+            success = process_record(cur_record_lines)
+            if not success:
+                break
             cur_record_lines = []
         else:
             cur_record_lines.append(line)
 
-    process_record(cur_record_lines) # process final record
+    # only parse final record if we've been successful so far; i.e., die
+    # on the first failed parse
+    if success:
+        success = process_record(cur_record_lines)
 
     print len(all_execution_points)
 
@@ -244,8 +254,17 @@ if __name__ == '__main__':
             elif len(prev_frame_ids) > len(cur_frame_ids):
                 if cur_frame_ids == prev_frame_ids[:-1]:
                     prev['event'] = 'return'
-        # make the final entry a 'return' (presumably from main) just for posterity
-        final_execution_points[-1]['event'] = 'return'
+
+        # super hack! what should we do about the LAST entry in the
+        # trace? if all went well with parsing all entries, then make it
+        # a 'return' (presumably from main) for proper closure. if
+        # something went wrong (!success), then make it an 'exception'
+        # with a cryptic message
+        if success:
+            final_execution_points[-1]['event'] = 'return'
+        else:
+            final_execution_points[-1]['event'] = 'exception'
+            final_execution_points[-1]['exception_msg'] = 'Your code crashed for some unknown reason :( Please report a bug to philip@pgbovine.net'
 
 
     for elt in final_execution_points:
