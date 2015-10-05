@@ -181,8 +181,6 @@ if __name__ == '__main__':
     if success:
         success = process_record(cur_record_lines)
 
-    print len(all_execution_points)
-
     # now do some filtering action based on heuristics
     filtered_execution_points = []
 
@@ -267,8 +265,13 @@ if __name__ == '__main__':
             final_execution_points[-1]['exception_msg'] = 'Your code crashed for some unknown reason :( Please report a bug to philip@pgbovine.net'
 
 
-    for elt in final_execution_points:
-        print elt['event'], [e['func_name'] for e in elt['stack_to_render']]
+    #for elt in final_execution_points:
+    #    print elt['event'], [e['func_name'] for e in elt['stack_to_render']]
 
     cod = open(basename + '.c').read()
 
+    # produce the final trace, voila!
+    final_res = {'code': cod, 'trace': final_execution_points}
+
+    # use sort_keys to get some sensible ordering on object keys
+    print json.dumps(final_res, indent=2, sort_keys=True)
