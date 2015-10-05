@@ -30,6 +30,7 @@ gcc version 4.8.4 (Ubuntu 4.8.4-2ubuntu1~14.04)
 import json
 import pprint
 import sys
+from optparse import OptionParser
 
 pp = pprint.PrettyPrinter(indent=2)
 
@@ -123,7 +124,7 @@ def encode_value(obj, heap):
     elif obj['kind'] == 'pointer':
         if 'deref_val' in obj:
             encode_value(obj['deref_val'], heap) # update the heap
-        return ['C_PTR', obj['addr'], obj['val']]
+        return ['C_DATA', obj['addr'], 'pointer', obj['val']]
 
     elif obj['kind'] == 'struct':
         ret = ['INSTANCE']
@@ -161,7 +162,12 @@ def encode_value(obj, heap):
 
 
 if __name__ == '__main__':
-    basename = sys.argv[1]
+    parser = OptionParser(usage="Create an OPT trace from a Valgrind trace")
+    parser.add_option("--create_jsvar", dest="js_varname", default=None,
+                      help="Create a JavaScript variable out of the trace")
+    (options, args) = parser.parse_args()
+
+    basename = args[0]
     cur_record_lines = []
 
     success = True
@@ -274,4 +280,8 @@ if __name__ == '__main__':
     final_res = {'code': cod, 'trace': final_execution_points}
 
     # use sort_keys to get some sensible ordering on object keys
-    print json.dumps(final_res, indent=2, sort_keys=True)
+    s = json.dumps(final_res, indent=2, sort_keys=True)
+    if options.js_varname:
+        print 'var ' + options.js_varname + ' = ' + s + ';'
+    else:
+        print s
