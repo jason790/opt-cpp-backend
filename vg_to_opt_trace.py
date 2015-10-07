@@ -127,8 +127,7 @@ def encode_value(obj, heap):
         return ['C_DATA', obj['addr'], 'pointer', obj['val']]
 
     elif obj['kind'] == 'struct':
-        ret = ['INSTANCE']
-        ret.append(obj['type'])
+        ret = ['C_STRUCT', obj['addr'], obj['type']]
 
         # sort struct members by address so that they look ORDERED
         members = obj['val'].items()
@@ -139,7 +138,7 @@ def encode_value(obj, heap):
         return ret
 
     elif obj['kind'] == 'array':
-        ret = ['LIST']
+        ret = ['C_ARRAY', obj['addr']]
         for e in obj['val']:
             ret.append(encode_value(e, heap)) # TODO: is an infinite loop possible here?
         return ret
@@ -151,7 +150,7 @@ def encode_value(obj, heap):
 
     elif obj['kind'] == 'heap_block':
         assert obj['addr'] not in heap
-        new_elt = ['LIST']
+        new_elt = ['C_ARRAY', obj['addr']]
         for e in obj['val']:
             new_elt.append(encode_value(e, heap)) # TODO: is an infinite loop possible here?
         heap[obj['addr']] = new_elt
@@ -268,7 +267,7 @@ if __name__ == '__main__':
             final_execution_points[-1]['event'] = 'return'
         else:
             final_execution_points[-1]['event'] = 'exception'
-            final_execution_points[-1]['exception_msg'] = 'Your code crashed for some unknown reason :( Please report a bug to philip@pgbovine.net'
+            final_execution_points[-1]['exception_msg'] = 'Oh noes, your code just crashed!\nSend bug reports to philip@pgbovine.net'
 
 
     #for elt in final_execution_points:
