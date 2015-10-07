@@ -6,7 +6,10 @@ all:  basic \
 			globals \
 			string-array \
 			structs-and-arrays \
-			pointer-chain
+			pointer-chain \
+			typedef-test \
+			type-qualifiers \
+			shadowing
 
 all-traces: basic.trace \
 						meng-thesis-example.trace \
@@ -16,7 +19,10 @@ all-traces: basic.trace \
 						globals.trace \
 						string-array.trace \
 						structs-and-arrays.trace \
-						pointer-chain.trace
+						pointer-chain.trace \
+						typedef-test.trace \
+						type-qualifiers.trace \
+						shadowing.trace
 
 
 %: %.c
