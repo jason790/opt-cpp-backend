@@ -349,9 +349,13 @@ static void pg_pp_TyBound( const XArray* tyents, UWord cuOff )
 }
 */
 
-SizeT pg_get_elt_size(TyEnt* ent);
-SizeT pg_get_elt_size(TyEnt* ent)
+SizeT pg_get_elt_size(const XArray* /* of TyEnt */ ents,
+                      UWord cuOff_to_find);
+SizeT pg_get_elt_size(const XArray* /* of TyEnt */ ents,
+                      UWord cuOff_to_find)
 {
+  TyEnt* ent = ML_(TyEnts__index_by_cuOff)(ents, NULL, cuOff_to_find);
+
   switch (ent->tag) {
     case Te_TyBase:
       return ent->Te.TyBase.szB;
@@ -362,6 +366,8 @@ SizeT pg_get_elt_size(TyEnt* ent)
       return ent->Te.TyEnum.szB;
     case Te_TyStOrUn:
       return ent->Te.TyStOrUn.szB;
+    case Te_TyTyDef:
+      return pg_get_elt_size(ents, ent->Te.TyTyDef.typeR); // recurse!
 
     // TODO: handle these in the future
     case Te_EMPTY:
@@ -372,11 +378,11 @@ SizeT pg_get_elt_size(TyEnt* ent)
     case Te_Bound:
     case Te_TyPtrMbr:
     case Te_TyRvalRef:
-    case Te_TyTyDef:
     case Te_TyArray:
     case Te_TyFn:
     case Te_TyQual:
     case Te_TyVoid:
+      VG_(printf)("ent->tag: %d", ent->tag);
       vg_assert(0); // unhandled
   }
   vg_assert(0); // unhandled
@@ -544,9 +550,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          VG_(describe_addr)(ptr_val, &ai);
          if (ai.tag == Addr_Block) {
            // if this is a heap pointer ...
-
-           TyEnt* element_ent = ML_(TyEnts__index_by_cuOff)(tyents, NULL, ent->Te.TyPorR.typeR);
-           SizeT element_size = pg_get_elt_size(element_ent);
+           SizeT element_size = pg_get_elt_size(tyents, ent->Te.TyPorR.typeR);
 
            Addr block_base_addr = ptr_val - ai.Addr.Block.rwoffset;
 
@@ -621,7 +625,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
              VG_(OSetWord_Insert)(encoded_addrs, (UWord)ptr_val);
 
              TyEnt* element_ent = ML_(TyEnts__index_by_cuOff)(tyents, NULL, ent->Te.TyPorR.typeR);
-             SizeT element_size = pg_get_elt_size(element_ent);
+             SizeT element_size = pg_get_elt_size(tyents, ent->Te.TyPorR.typeR);
 
              // only try to print out string literals like "hello world"
              // since there's a clear null-terminator boundary. other
@@ -760,8 +764,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
             UWord bound_cuOff = *(UWord*)VG_(indexXA)(xa, 0);
 
             // the type entry of the array element(s)
-            TyEnt* element_ent = ML_(TyEnts__index_by_cuOff)(tyents, NULL, ent->Te.TyArray.typeR);
-            SizeT element_size = pg_get_elt_size(element_ent);
+            SizeT element_size = pg_get_elt_size(tyents, ent->Te.TyArray.typeR);
 
             // inlined from pg_pp_TyBound
             TyEnt* bound_ent = ML_(TyEnts__index_by_cuOff)( tyents, NULL, bound_cuOff );
