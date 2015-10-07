@@ -5,7 +5,8 @@ all:  basic \
 			struct-basic \
 			globals \
 			string-array \
-			structs-and-arrays
+			structs-and-arrays \
+			pointer-chain
 
 all-traces: basic.trace \
 						meng-thesis-example.trace \
@@ -14,7 +15,8 @@ all-traces: basic.trace \
 						struct-basic.trace \
 						globals.trace \
 						string-array.trace \
-						structs-and-arrays.trace
+						structs-and-arrays.trace \
+						pointer-chain.trace
 
 
 %: %.c
