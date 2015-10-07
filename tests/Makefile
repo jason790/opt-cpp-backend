@@ -3,22 +3,26 @@ all:  basic \
 			array-overflow \
 			array-param \
 			struct-basic \
-			globals
+			globals \
+			string-array \
+			structs-and-arrays
 
 all-traces: basic.trace \
 						meng-thesis-example.trace \
 						array-overflow.trace \
 						array-param.trace \
 						struct-basic.trace \
-						globals.trace
+						globals.trace \
+						string-array.trace \
+						structs-and-arrays.trace
 
 
 %: %.c
 	gcc -ggdb -O0 -fno-omit-frame-pointer $< -o $@
 
-%.vgtrace: % ../valgrind-3.11.0/inst/bin/valgrind ../vg_to_opt_trace.py
+%.vgtrace: % ../valgrind-3.11.0/inst/bin/valgrind
 	# always return 'success' to keep 'make' running even on errors
 	../valgrind-3.11.0/inst/bin/valgrind --tool=memcheck --source-filename=$<.c --trace-filename=$<.vgtrace ./$< || true
 
-%.trace: %.vgtrace
-	python ../vg_to_opt_trace.py $(basename $<) > $(basename $<).trace || true
+%.trace: %.vgtrace ../vg_to_opt_trace.py
+	python ../vg_to_opt_trace.py --create_jsvar=trace $(basename $<) > $(basename $<).trace || true
