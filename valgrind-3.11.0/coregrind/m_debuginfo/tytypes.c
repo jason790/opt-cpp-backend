@@ -461,6 +461,8 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
              VG_(fprintf)(trace_fp, "%d", *((int*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(long int)) {
              VG_(fprintf)(trace_fp, "%ld", *((long int*)data_addr));
+           } else if (ent->Te.TyBase.szB == sizeof(long long int)) {
+             VG_(fprintf)(trace_fp, "%lld", *((long long int*)data_addr));
            } else {
              // what other stuff is here?!?
              vg_assert(0);
@@ -474,6 +476,8 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
              VG_(fprintf)(trace_fp, "%u", *((unsigned int*)data_addr));
            } else if (ent->Te.TyBase.szB == sizeof(unsigned long int)) {
              VG_(fprintf)(trace_fp, "%lu", *((unsigned long int*)data_addr));
+           } else if (ent->Te.TyBase.szB == sizeof(unsigned long long int)) {
+             VG_(fprintf)(trace_fp, "%llu", *((unsigned long long int*)data_addr));
            } else {
              // what other stuff is here?!?
              vg_assert(0);

@@ -28,7 +28,7 @@ RED   = '\033[91m'
 ENDC  = '\033[0m'  # end color
 
 import re
-memaddr_RE = re.compile('0x[0-9a-f]+')
+memaddr_RE = re.compile('0x[0-9A-F]+') # remember CAPITAL A-F instead of lowercase :)
 
 # canonicalize all object IDs, such as "206":
 # since they sometimes vary across executions due to different memory

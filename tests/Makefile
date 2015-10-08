@@ -10,7 +10,8 @@ all:  basic \
 			typedef-test \
 			type-qualifiers \
 			shadowing \
-			pointers-gone-wild
+			pointers-gone-wild \
+			number-types
 
 all-traces: basic.trace \
 						meng-thesis-example.trace \
@@ -24,7 +25,8 @@ all-traces: basic.trace \
 						typedef-test.trace \
 						type-qualifiers.trace \
 						shadowing.trace \
-						pointers-gone-wild.trace
+						pointers-gone-wild.trace \
+						number-types.trace
 
 
 %: %.c
