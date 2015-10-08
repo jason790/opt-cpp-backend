@@ -36,6 +36,9 @@ pp = pprint.PrettyPrinter(indent=2)
 
 RECORD_SEP = '=== pg_trace_inst ==='
 
+
+ONLY_ONE_REC_PER_LINE = True
+
 all_execution_points = []
 
 # True if successful parse, False if not
@@ -269,9 +272,42 @@ if __name__ == '__main__':
             final_execution_points[-1]['event'] = 'exception'
             final_execution_points[-1]['exception_msg'] = 'Oh noes, your code just crashed!\nSend bug reports to philip@pgbovine.net'
 
+    # only keep the FIRST 'step_line' event for any given line, to match what
+    # a line-level debugger would do
+    if ONLY_ONE_REC_PER_LINE:
+        tmp = []
+        prev_event = None
+        prev_line = None
+        prev_frame_ids = None
 
-    #for elt in final_execution_points:
-    #    print elt['event'], [e['func_name'] for e in elt['stack_to_render']]
+        for elt in final_execution_points:
+            skip = False
+            cur_event = elt['event']
+            cur_line = elt['line']
+            cur_frame_ids = [e['frame_id'] for e in elt['stack_to_render']]
+            if prev_frame_ids:
+                if cur_event == prev_event == 'step_line':
+                    if cur_line == prev_line and cur_frame_ids == prev_frame_ids:
+                        skip = True
+
+            if not skip:
+                tmp.append(elt)
+
+            prev_event = cur_event
+            prev_line = cur_line
+            prev_frame_ids = cur_frame_ids
+
+        final_execution_points = tmp # the ole' switcheroo
+
+
+    '''
+    for elt in final_execution_points:
+        skip = False
+        cur_event = elt['event']
+        cur_line = elt['line']
+        cur_frame_ids = [e['frame_id'] for e in elt['stack_to_render']]
+        print cur_event, cur_line, cur_frame_ids
+    '''
 
     cod = open(basename + '.c').read()
 
