@@ -10,7 +10,7 @@ TESTDIRS = ['.']
 INPUT_FILE_EXTENSION = '.c'
 
 # program to run, with input file as an extra argument
-PROGRAM = ['echo', 'python', 'run_test_from_scratch.py']
+PROGRAM = ['python', 'run_test_from_scratch.py']
 
 # this program should output to stdout, which will be redirected to this
 # extension:
