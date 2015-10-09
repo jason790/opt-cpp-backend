@@ -5,9 +5,9 @@ by Philip Guo
 forked from OnlinePythonTutor/v4-cokapi/backends/ruby/golden_test.py
 '''
 
-# find all input files with extension INPUT_FILE_EXTENSION in TESTDIRS
+# find all input files with extension INPUT_FILE_EXTENSIONS in TESTDIRS
 TESTDIRS = ['.']
-INPUT_FILE_EXTENSION = '.c'
+INPUT_FILE_EXTENSIONS = ['.c', '.cpp']
 
 # program to run, with input file as an extra argument
 PROGRAM = ['python', 'run_test_from_scratch.py']
@@ -56,7 +56,7 @@ def filter_output(lines):
 def execute(input_filename):
   assert os.path.isfile(input_filename)
   (base, ext) = os.path.splitext(input_filename)
-  assert ext == INPUT_FILE_EXTENSION
+  assert ext in INPUT_FILE_EXTENSIONS
 
   (stdout, stderr) = Popen(PROGRAM + [input_filename], stdout=PIPE, stderr=PIPE).communicate()
 
@@ -141,7 +141,7 @@ def run_test(input_filename, clobber_golden=False):
   print 'Testing', input_filename,
 
   (base, ext) = os.path.splitext(input_filename)
-  assert ext == INPUT_FILE_EXTENSION
+  assert ext in INPUT_FILE_EXTENSIONS
 
   # to eliminate possibility of using stale output:
   outfile = base + OUTPUT_FILE_EXTENSION
@@ -193,7 +193,7 @@ if __name__ == "__main__":
   for (pwd, subdirs, files) in itertools.chain(*[os.walk(e) for e in TESTDIRS]):
     for f in files:
       (base, ext) = os.path.splitext(f)
-      if ext == INPUT_FILE_EXTENSION:
+      if ext in INPUT_FILE_EXTENSIONS:
         fullpath = os.path.join(pwd, f)
         ALL_TESTS.append(fullpath)
 
