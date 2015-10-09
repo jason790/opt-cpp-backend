@@ -1,17 +1,18 @@
-all:  basic \
-			meng-thesis-example \
-			array-overflow \
-			array-param \
-			struct-basic \
-			globals \
-			string-array \
-			structs-and-arrays \
-			pointer-chain \
-			typedef-test \
-			type-qualifiers \
-			shadowing \
-			pointers-gone-wild \
-			number-types
+#all:  basic \
+#			meng-thesis-example \
+#			array-overflow \
+#			array-param \
+#			struct-basic \
+#			globals \
+#			string-array \
+#			structs-and-arrays \
+#			pointer-chain \
+#			typedef-test \
+#			type-qualifiers \
+#			shadowing \
+#			pointers-gone-wild \
+#			number-types \
+#			first
 
 all-traces: basic.trace \
 						meng-thesis-example.trace \
@@ -26,15 +27,28 @@ all-traces: basic.trace \
 						type-qualifiers.trace \
 						shadowing.trace \
 						pointers-gone-wild.trace \
-						number-types.trace
+						number-types.trace \
+						first.trace
 
 
-%: %.c
-	@gcc -ggdb -O0 -fno-omit-frame-pointer $< -o $@
+#%: %.c
+#	@gcc -ggdb -O0 -fno-omit-frame-pointer $< -o $@
+
+#%: %.cpp
+#	@g++ -ggdb -O0 -fno-omit-frame-pointer $< -o $@
 
 # use '|| true' to always return success and keep 'make' running even on errors
-%.vgtrace: % ../valgrind-3.11.0/inst/bin/valgrind
-	@../valgrind-3.11.0/inst/bin/valgrind --tool=memcheck --source-filename=$<.c --trace-filename=$<.vgtrace ./$< || true
+#%.vgtrace: % ../valgrind-3.11.0/inst/bin/valgrind
+#	../valgrind-3.11.0/inst/bin/valgrind --tool=memcheck --source-filename=$<.c --trace-filename=$<.vgtrace ./$< || true
+
+
+%.vgtrace: %.c ../valgrind-3.11.0/inst/bin/valgrind
+	@gcc -ggdb -O0 -fno-omit-frame-pointer $< -o $@
+	@../valgrind-3.11.0/inst/bin/valgrind --tool=memcheck --source-filename=$< --trace-filename=$(basename $<).vgtrace ./$(basename $<) || true
+
+%.vgtrace: %.cpp ../valgrind-3.11.0/inst/bin/valgrind
+	@g++ -ggdb -O0 -fno-omit-frame-pointer $< -o $@
+	@../valgrind-3.11.0/inst/bin/valgrind --tool=memcheck --source-filename=$< --trace-filename=$(basename $<).vgtrace ./$(basename $<) || true
 
 %.trace: %.vgtrace ../vg_to_opt_trace.py
 	@python ../vg_to_opt_trace.py --create_jsvar=trace $(basename $<) > $(basename $<).trace || true

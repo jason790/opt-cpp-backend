@@ -4,7 +4,7 @@
 # Created 2015-10-04 by Philip Guo
 
 # pass in the $basename of a program. assumes that the Valgrind-produced
-# trace is $basename.vgtrace and the source file is $basename.c
+# trace is $basename.vgtrace and the source file is $basename.{c,cpp}
 
 
 # this is pretty brittle and dependent on the user's gcc version and
@@ -28,6 +28,7 @@ gcc version 4.8.4 (Ubuntu 4.8.4-2ubuntu1~14.04)
 
 
 import json
+import os
 import pprint
 import sys
 from optparse import OptionParser
@@ -309,7 +310,10 @@ if __name__ == '__main__':
         print cur_event, cur_line, cur_frame_ids
     '''
 
-    cod = open(basename + '.c').read()
+    if os.path.isfile(basename + '.c'):
+        cod = open(basename + '.c').read()
+    else:
+        cod = open(basename + '.cpp').read()
 
     # produce the final trace, voila!
     final_res = {'code': cod, 'trace': final_execution_points}
