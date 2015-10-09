@@ -1,19 +1,3 @@
-#all:  basic \
-#			meng-thesis-example \
-#			array-overflow \
-#			array-param \
-#			struct-basic \
-#			globals \
-#			string-array \
-#			structs-and-arrays \
-#			pointer-chain \
-#			typedef-test \
-#			type-qualifiers \
-#			shadowing \
-#			pointers-gone-wild \
-#			number-types \
-#			first
-
 all-traces: basic.trace \
 						meng-thesis-example.trace \
 						array-overflow.trace \
@@ -28,7 +12,7 @@ all-traces: basic.trace \
 						shadowing.trace \
 						pointers-gone-wild.trace \
 						number-types.trace \
-						first.trace
+						cpp-first.trace
 
 
 #%: %.c
@@ -43,15 +27,15 @@ all-traces: basic.trace \
 
 
 %.vgtrace: %.c ../valgrind-3.11.0/inst/bin/valgrind
-	@gcc -ggdb -O0 -fno-omit-frame-pointer $< -o $@
+	@gcc -ggdb -O0 -fno-omit-frame-pointer $< -o $(basename $@)
 	@../valgrind-3.11.0/inst/bin/valgrind --tool=memcheck --source-filename=$< --trace-filename=$(basename $<).vgtrace ./$(basename $<) || true
 
 %.vgtrace: %.cpp ../valgrind-3.11.0/inst/bin/valgrind
-	@g++ -ggdb -O0 -fno-omit-frame-pointer $< -o $@
+	@g++ -ggdb -O0 -fno-omit-frame-pointer $< -o $(basename $@)
 	@../valgrind-3.11.0/inst/bin/valgrind --tool=memcheck --source-filename=$< --trace-filename=$(basename $<).vgtrace ./$(basename $<) || true
 
 %.trace: %.vgtrace ../vg_to_opt_trace.py
 	@python ../vg_to_opt_trace.py --create_jsvar=trace $(basename $<) > $(basename $<).trace || true
 
 clean:
-	rm -f *.trace
+	rm -f *.trace *.vgtrace
