@@ -38,4 +38,4 @@ all-traces: basic.trace \
 	@python ../vg_to_opt_trace.py --create_jsvar=trace $(basename $<) > $(basename $<).trace || true
 
 clean:
-	rm -f *.trace *.vgtrace
+	rm -f *.trace *.vgtrace *.out
