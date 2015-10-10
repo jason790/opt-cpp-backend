@@ -12,6 +12,28 @@ all-traces: basic.trace \
 						shadowing.trace \
 						pointers-gone-wild.trace \
 						number-types.trace \
+						fjalar-ArraysInStructTest.trace \
+						fjalar-ArrayTest.trace \
+						fjalar-CoercePointerTest.trace \
+						fjalar-crazy-test-1.trace \
+						fjalar-FloatTest.trace \
+						fjalar-function-pointer.trace \
+						fjalar-functions.trace \
+						fjalar-GlobalTest.trace \
+						fjalar-inline-func.trace \
+						fjalar-IntTest.trace \
+						fjalar-local-ptr.trace \
+						fjalar-MultiDimArrayTest.trace \
+						fjalar-NestedStructTest.trace \
+						fjalar-NestedStructVarList.trace \
+						fjalar-pointer-levels.trace \
+						fjalar-PointerTest.trace \
+						fjalar-small-test.trace \
+						fjalar-StaticArraysTest.trace \
+						fjalar-string-arrays.trace \
+						fjalar-StructPtrTest.trace \
+						fjalar-TrivialTest.trace \
+						fjalar-TypedefTest.trace \
 						cpp-array-struct-test.trace \
 						cpp-class-pointers.trace \
 						cpp-first.trace \
