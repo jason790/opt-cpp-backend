@@ -12,7 +12,11 @@ all-traces: basic.trace \
 						shadowing.trace \
 						pointers-gone-wild.trace \
 						number-types.trace \
-						cpp-first.trace
+						cpp-first.trace \
+						cpp-class-basic.cpp \
+						cpp-class-date.cpp \
+						cpp-class-pointers.cpp \
+						cpp-pass-by-ref.cpp
 
 
 #%: %.c

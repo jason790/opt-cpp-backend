@@ -506,6 +506,7 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
          VG_(fprintf)(trace_fp, "}");
          break;
       case Te_TyPtr:
+      case Te_TyRef: /* TODO: maybe tag this as a special C++ reference type later? */
          // record that this block has been rendered
          if (!VG_(OSetWord_Contains)(encoded_addrs, (UWord)data_addr)) {
            VG_(OSetWord_Insert)(encoded_addrs, (UWord)data_addr);
@@ -686,12 +687,6 @@ void ML_(pg_pp_varinfo)( const XArray* /* of TyEnt */ tyents,
            VG_(fprintf)(trace_fp, "}");
            //VG_(printf)("<other ptr %p, tag: %d>", (void*)ptr_val, (int)ai.tag);
          }
-         break;
-      case Te_TyRef:
-         vg_assert(0); // unhandled
-         //ML_(pg_pp_varinfo)(tyents, ent->Te.TyPorR.typeR, data_addr /* stent */,
-         //                   is_mem_defined_func, encoded_addrs, trace_fp);
-         //VG_(printf)("&");
          break;
       case Te_TyPtrMbr:
          vg_assert(0); // unhandled
