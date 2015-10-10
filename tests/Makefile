@@ -12,18 +12,26 @@ all-traces: basic.trace \
 						shadowing.trace \
 						pointers-gone-wild.trace \
 						number-types.trace \
+						cpp-array-struct-test.trace \
+						cpp-class-pointers.trace \
 						cpp-first.trace \
-						cpp-class-basic.cpp \
-						cpp-class-date.cpp \
-						cpp-class-pointers.cpp \
-						cpp-pass-by-ref.cpp
+						cpp-object-array.trace \
+						cpp-virtual-method.trace \
+						cpp-class-basic.trace \
+						cpp-consts.trace \
+						cpp-function-types.trace \
+						cpp-pass-by-ref.trace \
+						cpp-class-date.trace \
+						cpp-exception.trace \
+						cpp-inheritance.trace \
+						cpp-stack-inline.trace
 
 
 #%: %.c
 #	@gcc -ggdb -O0 -fno-omit-frame-pointer $< -o $@
 
 #%: %.cpp
-#	@g++ -ggdb -O0 -fno-omit-frame-pointer $< -o $@
+#	g++ -ggdb -O0 -fno-omit-frame-pointer $< -o $@
 
 # use '|| true' to always return success and keep 'make' running even on errors
 #%.vgtrace: % ../valgrind-3.11.0/inst/bin/valgrind
